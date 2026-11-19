@@ -1,0 +1,7 @@
+{
+  "appId": "com.hakacrossbox.timer",
+  "appName": "HAKATIMER",
+  "webDir": "www",
+  "backgroundColor": "#050506",
+  "android": { "allowMixedContent": false }
+}
