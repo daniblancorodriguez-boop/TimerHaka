@@ -407,3 +407,12 @@ svg { overflow: visible; }
 @media (orientation: portrait) {
   .run.big .run-body { position: fixed; top: 0; left: 100%; width: 100vh; width: 100dvh; height: 100vw; height: 100dvw; transform-origin: 0 0; transform: rotate(90deg); z-index: 5; }
 }
+
+/* reloj grande con esfera circular: se oculta el círculo y el marcador ocupa toda la pantalla */
+.run.big .dial { width: 100% !important; height: 100% !important; border-radius: 0; background: none; box-shadow: none; }
+.run.big .dial .ticks { display: none; }
+.run.big .dial-in #led-blue { --u: inherit; }
+.run.big .bezel { padding: 6px 10px; }
+.run.big .dial { padding-top: 34px; box-sizing: border-box; }
+.run.big .dial-in { inset: 34px 0 0 0; }
+.run.big .bezel { padding-top: 34px; }

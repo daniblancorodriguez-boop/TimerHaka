@@ -61,7 +61,7 @@ iniciándolo al pulsar Empezar y parándolo al salir del reloj, más el permiso 
 
 - Al pulsar Empezar se abre la pantalla del reloj **parada**: hay que tocar **INICIAR** (suena un «boop» pulsante) para que arranque la cuenta atrás. «Reiniciar» vuelve a ese estado.
 - **Esfera circular** (predeterminada): círculo amarillo corporativo con el tiempo y las rondas dentro y 60 rayas que se van consumiendo al ritmo del reloj (por fase; en cuenta hacia arriba, una vuelta por minuto).
-- **Reloj grande**: botón de las flechas en la barra superior del reloj. Deja solo el reloj y las rondas a pantalla completa y en horizontal (si el móvil está en vertical, la imagen se gira). Tocar el reloj inicia / pausa / reanuda; en modos manuales tocar las rondas suma una; la × sale.
+- **Reloj grande**: botón de las flechas en la barra superior del reloj. Deja solo el reloj y las rondas, siempre en marcador rectangular (sea cual sea la esfera), a pantalla completa y en horizontal (si el móvil está en vertical, la imagen se gira). Tocar el reloj inicia / pausa / reanuda; en modos manuales tocar las rondas suma una; la × sale.
 - **Esfera clásica**: el marcador rectangular de siempre. Se cambia en Ajustes → «Esfera del reloj».
 
 ## Sonidos de cuenta atrás y voces

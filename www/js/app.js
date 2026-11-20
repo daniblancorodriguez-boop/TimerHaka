@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.8.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.8.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -774,7 +774,14 @@
     var bigOn = false;
     function setBig(on) {
       if (!!on === !!bigOn) return; bigOn = !!on;
-      run.classList.toggle('big', on);
+      run.classList.toggle('big', bigOn);
+      /* con la esfera circular, el reloj grande es siempre el marcador rectangular a todo el ancho */
+      var dl = $('#dial');
+      if (dl) {
+        unfit();
+        if (bigOn) { dl.style.width = ''; dl.style.height = ''; unfit = window.LED.autoFit($('.stage'), dl.querySelector('.dial-in'), dl); }
+        else unfit = ringFit($('.stage'), dl);
+      }
       var de = document.documentElement;
       try {
         if (on) {
