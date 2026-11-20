@@ -140,6 +140,15 @@
     PRESETS: PRESETS,
     ACCESSIBLE: ACCESSIBLE,
     unlock: ensure, // llamar desde un gesto del usuario (botón Empezar)
+    /* «Boop» pulsante al tocar INICIAR: dos pulsos redondos que bajan de tono */
+    boop: function () {
+      var s = root.Store.settings(), c = ensure();
+      if (navigator.vibrate && s.vibrate) navigator.vibrate(35);
+      if (!c) return;
+      var d = master(c, s.volume);
+      tone(c, d, { freq: 560, freqEnd: 430, dur: 0.13, gain: 0.7 });
+      tone(c, d, { freq: 430, freqEnd: 250, dur: 0.24, gain: 0.7, start: 0.12 });
+    },
     /* Reproduce el sonido configurado para un evento: countdown, go, minute, work, rest, end */
     play: function (event) {
       var s = root.Store.settings();

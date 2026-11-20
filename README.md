@@ -57,6 +57,12 @@ Para que Android no duerma la app con la pantalla apagada hace falta un **servic
 sin probar en dispositivo). Opción: plugin de Capacitor para foreground service (p. ej. `@capawesome-team/capacitor-android-foreground-service`)
 iniciándolo al pulsar Empezar y parándolo al salir del reloj, más el permiso `FOREGROUND_SERVICE` en el manifiesto.
 
+## Esfera del reloj y botón INICIAR
+
+- Al pulsar Empezar se abre la pantalla del reloj **parada**: hay que tocar **INICIAR** (suena un «boop» pulsante) para que arranque la cuenta atrás. «Reiniciar» vuelve a ese estado.
+- **Esfera circular** (predeterminada): círculo amarillo corporativo con el tiempo y las rondas dentro y 60 rayas que se van consumiendo al ritmo del reloj (por fase; en cuenta hacia arriba, una vuelta por minuto).
+- **Esfera clásica**: el marcador rectangular de siempre. Se cambia en Ajustes → «Esfera del reloj».
+
 ## Sonidos de cuenta atrás y voces
 Archivos en `www/audio/` (se guardan para usar sin conexión):
 - `cuenta-atras.mp3`: 3 pitidos y 1 largo (4 s). Se arranca 3,02 s antes del inicio y de cada cambio de minuto (EMOM, Fight Gone Bad) para que el pitido largo caiga justo en el cambio. Con menos de 4 s de cuenta atrás previa suenan los pitidos de siempre.

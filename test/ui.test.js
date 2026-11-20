@@ -25,7 +25,9 @@ const www = path.join(__dirname, '..', 'www');
   const $$ = s => [...w.document.querySelectorAll(s)];
   const click = el => el.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
   const input = (el, v) => { if (v !== undefined) el.value = v; el.dispatchEvent(new w.Event('input', { bubbles: true })); };
-  const tick = ms => new Promise(r => setTimeout(r, ms));
+  let autoStart = true;   // casi todas las pruebas dan por hecho que el reloj corre: se pulsa INICIAR solo
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const tick = async ms => { await sleep(ms); if (autoStart) { const p = w.document.getElementById('pause'); if (p && /INICIAR/.test(p.textContent)) { click(p); await sleep(5); } } };
   const go = async h => { w.location.hash = h; await tick(30); const lv = $('#lv-exit'); if (lv) { click(lv); await tick(30); } };   // si hay un entreno en marcha, se confirma la salida
 
   // ---- Menú: orden pedido, sin guardados ni reloj ----
@@ -344,6 +346,43 @@ const www = path.join(__dirname, '..', 'www');
   w.Sound.schedule = origSchedule; w.Store.setSettings({ prep: 0, halfVoice: true, wellVoice: true, countFile: true });
   await go('#/');
   console.log('Sonidos nuevos UI OK');
+
+  // ---- INICIAR + «boop» y esfera circular / clásica ----
+  autoStart = false;
+  w.Sound.schedule = function (ev, d, o) { sndCalls.push({ ev, d, o: o || {} }); return origSchedule.apply(this, arguments); };
+  const booped = []; const realBoop = w.Sound.boop; w.Sound.boop = function () { booped.push(1); };
+  w.Store.setSettings({ prep: 10, dial: 'ring' });
+  await go('#/'); await go('#/presets/emom'); sndCalls.length = 0; click($('[data-prun="p6"]')); await tick(150);
+  assert.strictEqual(w.location.hash, '#/run');
+  assert.ok(/INICIAR/.test($('#pause').textContent), 'al entrar, el botón dice INICIAR');
+  assert.ok($('#dial') && $$('#dial .tk').length === 60 && $$('#dial .tk.on').length === 60, 'esfera circular con 60 rayas encendidas');
+  assert.ok($('#dial #led-red') && $('#dial #led-blue'), 'tiempo y rondas dentro del círculo');
+  assert.ok(!$('.bezel'), 'la esfera circular no usa el marco rectangular');
+  const ledBefore = $('#led-red').innerHTML;
+  offset += 5000; await tick(200);
+  assert.strictEqual($('#led-red').innerHTML, ledBefore, 'sin pulsar INICIAR el tiempo no corre');
+  assert.strictEqual(sndCalls.length, 0, 'sin INICIAR no se programa ningún sonido');
+  assert.strictEqual(booped.length, 0);
+  click($('#pause')); await tick(200);
+  assert.strictEqual(booped.length, 1, 'al tocar INICIAR suena el boop');
+  assert.ok(/Pausa/.test($('#pause').textContent));
+  offset += 4000; await tick(200);
+  assert.ok($$('#dial .tk.on').length >= 30 && $$('#dial .tk.on').length <= 36, 'a 4 s de 10 s de preparación quedan 6/10 de las rayas: ' + $$('#dial .tk.on').length);
+  assert.ok(sndCalls.length > 0, 'tras INICIAR se programan los sonidos');
+  click($('#reset')); await tick(100);
+  assert.ok(/INICIAR/.test($('#pause').textContent) && $$('#dial .tk.on').length === 60, 'Reiniciar vuelve al estado de INICIAR');
+  w.Sound.boop = realBoop; w.Sound.schedule = origSchedule;
+  // esfera clásica
+  w.Store.setSettings({ dial: 'classic' });
+  await go('#/'); await go('#/presets/emom'); click($('[data-prun="p6"]')); await tick(150);
+  assert.ok($('.bezel') && !$('#dial') && /INICIAR/.test($('#pause').textContent), 'esfera clásica: marco rectangular y también INICIAR');
+  // el ajuste existe en Ajustes
+  await go('#/settings');
+  assert.ok($('#dial') && [...$('#dial').options].map(o => o.textContent).some(t => /Esfera clásica/.test(t)), 'opción «Esfera clásica» en Ajustes');
+  $('#dial').value = 'ring'; $('#dial').dispatchEvent(new w.Event('change', { bubbles: true }));
+  assert.strictEqual(w.Store.settings().dial, 'ring');
+  autoStart = true; await go('#/');
+  console.log('INICIAR, boop y esferas OK');
 
   // ---- Migración: datos de la versión anterior (solo texto) ----
   const old = { presets: [

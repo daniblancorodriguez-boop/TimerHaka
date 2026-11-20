@@ -35,7 +35,7 @@
   function defaults() {
     return {
       settings: {
-        prep: 10, beepLast3: true, countFile: true, halfVoice: true, wellVoice: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
+        prep: 10, beepLast3: true, dial: 'ring', countFile: true, halfVoice: true, wellVoice: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
           countdown: { preset: 'beep' }, go: { preset: 'horn' }, minute: { preset: 'bell' },
           work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' }

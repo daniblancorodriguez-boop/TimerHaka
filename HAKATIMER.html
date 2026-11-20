@@ -392,6 +392,18 @@ svg { overflow: visible; }
 .ed-top { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 .ed-top .btn { min-width: 150px; }
 
+/* ---------- Esfera circular ---------- */
+.dial { position: relative; border-radius: 50%; background: radial-gradient(circle at 50% 45%, #0b0b0d 0%, #000 70%); box-shadow: inset 0 0 30px rgba(0,0,0,.9); flex: none; }
+.dial .ticks { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.dial .rim { fill: none; stroke: var(--orange); stroke-width: 2.4; }
+.dial .tk { stroke: var(--orange); stroke-width: 3.4; stroke-linecap: round; opacity: .14; }
+.dial .tk.big { stroke-width: 4.6; }
+.dial .tk.on { opacity: 1; filter: drop-shadow(0 0 2px rgba(231,189,19,.55)); }
+.dial-in { position: absolute; inset: 0; }
+.dial-in #led-blue { --u: var(--ub); }
+.run.paused .dial .ticks { animation: blink 1s steps(2, jump-none) infinite; }
+@media (prefers-reduced-motion: reduce) { .run.paused .dial .ticks { animation: none; opacity: .6; } }
+
 </style>
 </head>
 <body>
@@ -807,7 +819,7 @@ svg { overflow: visible; }
   function defaults() {
     return {
       settings: {
-        prep: 10, beepLast3: true, countFile: true, halfVoice: true, wellVoice: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
+        prep: 10, beepLast3: true, dial: 'ring', countFile: true, halfVoice: true, wellVoice: true, volume: 0.8, vibrate: true, gymName: '', logo: null,
         sounds: {
           countdown: { preset: 'beep' }, go: { preset: 'horn' }, minute: { preset: 'bell' },
           work: { preset: 'tick' }, rest: { preset: 'long' }, end: { preset: 'horn' }
@@ -1109,6 +1121,15 @@ svg { overflow: visible; }
     PRESETS: PRESETS,
     ACCESSIBLE: ACCESSIBLE,
     unlock: ensure, // llamar desde un gesto del usuario (botón Empezar)
+    /* «Boop» pulsante al tocar INICIAR: dos pulsos redondos que bajan de tono */
+    boop: function () {
+      var s = root.Store.settings(), c = ensure();
+      if (navigator.vibrate && s.vibrate) navigator.vibrate(35);
+      if (!c) return;
+      var d = master(c, s.volume);
+      tone(c, d, { freq: 560, freqEnd: 430, dur: 0.13, gain: 0.7 });
+      tone(c, d, { freq: 430, freqEnd: 250, dur: 0.24, gain: 0.7, start: 0.12 });
+    },
     /* Reproduce el sonido configurado para un evento: countdown, go, minute, work, rest, end */
     play: function (event) {
       var s = root.Store.settings();
@@ -2218,7 +2239,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.7';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.6.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -2754,9 +2775,33 @@ svg { overflow: visible; }
       '<div class="grow"><div class="gymname" style="margin:0">' + esc(label) + '</div></div>' +
       '<img class="gym-logo' + logoCls() + '" src="' + esc(logoSrc()) + '" alt=""></div>' +
       '<h1 class="sr-only">Temporizador</h1><div class="phase" id="phase" aria-live="polite"></div>' +
-      '<div class="run-body"><div class="stage"><div class="bezel"><div class="display">' +
-      '<div class="led" id="led-blue" role="img" aria-label="Rondas"></div>' +
-      '<div class="led" id="led-red" role="img" aria-label="Tiempo"></div></div></div></div>' + (panel || '') + '</div>' + extraBlue;
+      '<div class="run-body">' + stageHtml() + (panel || '') + '</div>' + extraBlue;
+  }
+  /* Esfera predeterminada: círculo amarillo con 60 rayas que se consumen; el tiempo y las rondas van dentro.
+     Esfera clásica: el marco rectangular negro de siempre. */
+  function dialIsRing() { return Store.settings().dial !== 'classic'; }
+  function stageHtml() {
+    var leds = '<div class="led" id="led-blue" role="img" aria-label="Rondas"></div>' +
+      '<div class="led" id="led-red" role="img" aria-label="Tiempo"></div>';
+    if (!dialIsRing()) return '<div class="stage"><div class="bezel"><div class="display">' + leds + '</div></div></div>';
+    var t = '';
+    for (var i = 0; i < 60; i++) t += '<line class="tk on' + (i % 5 === 0 ? ' big' : '') + '" x1="100" y1="' + (i % 5 === 0 ? 11 : 11) + '" x2="100" y2="' + (i % 5 === 0 ? 29 : 23) + '" transform="rotate(' + (i * 6) + ' 100 100)"/>';
+    return '<div class="stage"><div class="dial" id="dial"><svg class="ticks" viewBox="0 0 200 200" aria-hidden="true"><circle class="rim" cx="100" cy="100" r="97"/>' + t + '</svg>' +
+      '<div class="display dial-in" data-layout="col">' + leds + '</div></div></div>';
+  }
+  /* Ajusta el tamaño del círculo al hueco disponible; el tiempo y las rondas se escalan con él */
+  function ringFit(stage, dial) {
+    function fit() {
+      var d = Math.max(120, Math.floor(Math.min(stage.clientWidth, stage.clientHeight) - 6));
+      dial.style.width = d + 'px'; dial.style.height = d + 'px';
+      var inner = dial.querySelector('.dial-in'), u = Math.max(0.2, Math.floor(d * 0.0019 * 100) / 100);
+      inner.style.setProperty('--u', u + 'px'); inner.style.setProperty('--ub', (u * 0.55).toFixed(2) + 'px');
+    }
+    fit();
+    var ro = window.ResizeObserver ? new window.ResizeObserver(fit) : null;
+    if (ro) ro.observe(stage);
+    window.addEventListener('resize', fit); window.addEventListener('orientationchange', fit);
+    return function () { if (ro) ro.disconnect(); window.removeEventListener('resize', fit); window.removeEventListener('orientationchange', fit); };
   }
 
   function viewCounter() {
@@ -2831,10 +2876,10 @@ svg { overflow: visible; }
 
     var run = $('.run');
     var blue = new window.LED($('#led-blue'), 'DD'), red = new window.LED($('#led-red'), 'DD:DD');
-    var startedAt, pausedTotal, pausedAt, prev, rounds, frozen, finished;
+    var startedAt, pausedTotal, pausedAt, prev, rounds, frozen, finished, ready = true;
 
     function reset() {
-      startedAt = performance.now(); pausedTotal = 0; pausedAt = null; prev = null; rounds = 0; frozen = null; finished = false;
+      ready = true; startedAt = performance.now(); pausedTotal = 0; pausedAt = null; prev = null; rounds = 0; frozen = null; finished = false;
       run.classList.remove('paused'); shareMode = false; armGuard(askLeave);
       setPauseBtn(false);
       $('#pause').disabled = false;
@@ -2843,11 +2888,12 @@ svg { overflow: visible; }
     }
     function elapsed() {
       if (frozen !== null) return frozen;
+      if (ready) return 0;
       var now = pausedAt !== null ? pausedAt : performance.now();
       return now - startedAt - pausedTotal;
     }
     function setPauseBtn(paused) {
-      $('#pause').innerHTML = (paused ? ICON.play : ICON.pause) + '<span>' + (paused ? 'Reanudar' : 'Pausa') + '</span>';
+      $('#pause').innerHTML = (paused || ready ? ICON.play : ICON.pause) + '<span>' + (ready ? 'INICIAR' : paused ? 'Reanudar' : 'Pausa') + '</span>';
     }
     function fmtDisplay(sec) {
       sec = Math.min(sec, 99 * 60 + 59);
@@ -2874,7 +2920,7 @@ svg { overflow: visible; }
     var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, countSample: useSched && settings.countFile, halfway: useSched && settings.halfVoice, wellDone: useSched && settings.wellVoice });
     function partial(e, el) { return !!e.len && el < e.ms + e.len - 100; }     // muestra ya empezada (tras una pausa): se retoma por donde iba
     function schedule() {
-      if (!useSched || finished || frozen !== null || pausedAt !== null) return;
+      if (!useSched || ready || finished || frozen !== null || pausedAt !== null) return;
       var el = elapsed();
       while (tlIdx < tl.length && tl[tlIdx].ms <= el + LOOK) {
         var e = tl[tlIdx];
@@ -2911,15 +2957,33 @@ svg { overflow: visible; }
       } else { res.kind = 'time'; res.value = sec; res.label = 'DURACIÓN'; res.sub = 'Entreno completado'; }
       lastResult = res;
     }
+    var tks = $$('#dial .tk'), litN = -1;
+    function ringFrac(cur, ms) {
+      var prepMs = prep * 1000;
+      if (cur.phase === 'done') return 0;
+      if (cur.phase === 'prep') return prepMs ? Math.max(0, Math.min(1, (prepMs - ms) / prepMs)) : 1;
+      var t = ms - prepMs, sg = plan.segments && plan.segments[cur.segIndex];
+      if (plan.kind === 'segments' && sg) {
+        var acc = 0; for (var i = 0; i < cur.segIndex; i++) acc += plan.segments[i].dur * 1000;
+        var dur = sg.dur * 1000; return Math.max(0, Math.min(1, (acc + dur - t) / dur));
+      }
+      return 1 - ((t % 60000) / 60000);       // cuenta hacia arriba: una vuelta por minuto
+    }
+    function drawRing(cur) {
+      if (!tks.length) return;
+      var n = Math.ceil(ringFrac(cur, elapsed()) * 60 - 1e-6);
+      if (n === litN) return; litN = n;
+      for (var i = 0; i < 60; i++) tks[i].setAttribute('class', 'tk' + (i >= 60 - n ? ' on' : '') + (i % 5 === 0 ? ' big' : ''));
+    }
     function tick() {
       var cur = T.stateAt(plan, prep, elapsed());
       if (frozen !== null) cur = { phase: 'done', display: cur.display, remaining: 0, round: cur.round, type: 'done', label: 'Fin' };
-      if (!finished) {
+      if (!finished && !ready) {
         if (!useSched) T.eventsFor(plan, prev, cur, { beepLast3: settings.beepLast3 }).forEach(function (ev) { Sound.play(ev); });
         prev = cur;
         if (cur.phase === 'done') finished = true;
       }
-      draw(cur); schedule();
+      draw(cur); drawRing(cur); schedule();
       if (finished && !shareMode) {
         shareMode = true; runGuard = null; buildResult();
         if (lastResult.sec >= 3 || lastResult.rounds > 0) {
@@ -2936,10 +3000,16 @@ svg { overflow: visible; }
     var iv = setInterval(tick, 50), wl = wakeLock();
     function onVisible() { if (document.visibilityState === 'visible') schedule(); }
     document.addEventListener('visibilitychange', onVisible);
-    var unfit = window.LED.autoFit($('.stage'), $('.display'), $('.bezel'));
+    var unfit = dialIsRing() ? ringFit($('.stage'), $('#dial')) : window.LED.autoFit($('.stage'), $('.display'), $('.bezel'));
 
+    function startNow() {
+      Sound.unlock(); Sound.boop();
+      ready = false; startedAt = performance.now(); pausedTotal = 0; pausedAt = null;
+      setPauseBtn(false); rewind(); tick();
+    }
     function togglePause() {
       if (finished) { if (shareMode) go('#/share'); return; }
+      if (ready) { startNow(); return; }
       if (pausedAt === null) { pausedAt = performance.now(); run.classList.add('paused'); setPauseBtn(true); Sound.cancelAll(); }
       else { pausedTotal += performance.now() - pausedAt; pausedAt = null; run.classList.remove('paused'); setPauseBtn(false); rewind(); }
     }
@@ -2961,7 +3031,7 @@ svg { overflow: visible; }
     /* Salir del entreno: seguir, pausar y guardar para retomar, o salir del todo */
     function askLeave(target, opt) {
       var fin = opt && opt.finish !== undefined;
-      if (finished) { runGuard = null; go(target || '#/'); return; }
+      if (finished || ready) { runGuard = null; go(target || '#/'); return; }
       if (document.getElementById('leave-sheet')) return;
       var back = document.createElement('div');
       back.className = 'sheet-back'; back.id = 'leave-sheet';
@@ -2983,12 +3053,12 @@ svg { overflow: visible; }
     armGuard(askLeave);
     $('#exit').addEventListener('click', function () { if (history.length > 1) history.back(); else askLeave('#/'); });
     if (resume) {
-      startedAt = performance.now() - resume.elapsed; pausedAt = performance.now(); rounds = resume.rounds; resume = null;
+      ready = false; startedAt = performance.now() - resume.elapsed; pausedAt = performance.now(); rounds = resume.rounds; resume = null;
       run.classList.add('paused'); setPauseBtn(true); Sound.cancelAll(); rewind();
       prev = T.stateAt(plan, prep, elapsed()); tick();
     }
     if (manual) {
-      var add = function (d) { rounds = Math.max(0, Math.min(99, rounds + d)); if (d > 0 && navigator.vibrate && settings.vibrate) navigator.vibrate(30); tick(); };
+      var add = function (d) { if (ready) return; rounds = Math.max(0, Math.min(99, rounds + d)); if (d > 0 && navigator.vibrate && settings.vibrate) navigator.vibrate(30); tick(); };
       $('#plus').addEventListener('click', function () { add(1); });
       $('#minus').addEventListener('click', function () { add(-1); });
       $('#led-blue').addEventListener('click', function () { add(1); });
@@ -3186,6 +3256,9 @@ svg { overflow: visible; }
     }).join('');
 
     app.innerHTML = '<div class="screen">' + header('Ajustes') +
+      '<div class="panel"><h2>Esfera del reloj</h2>' +
+      '<div class="field"><select class="text-in" id="dial" aria-label="Esfera del reloj"><option value="ring"' + (s.dial !== 'classic' ? ' selected' : '') + '>Esfera circular (predeterminada)</option><option value="classic"' + (s.dial === 'classic' ? ' selected' : '') + '>Esfera clásica</option></select></div>' +
+      '<p class="s-hint">Circular: el tiempo y las rondas dentro de un círculo amarillo cuyas rayas se van consumiendo. Clásica: marcador rectangular de siempre.</p></div>' +
       '<div class="panel"><h2>Cuenta atrás</h2>' +
       '<div class="field"><div class="flabel">Cuenta atrás antes de empezar</div><select class="text-in" id="prep">' + prepOpts + '</select></div>' +
       '<label class="switch"><span>Pitidos 3, 2, 1 al final de cada intervalo</span><input type="checkbox" id="b3"' + (s.beepLast3 ? ' checked' : '') + '></label>' +
@@ -3211,6 +3284,7 @@ svg { overflow: visible; }
       var t = e.target;
       if (t.id === 'prep') Store.setSettings({ prep: +t.value });
       else if (t.id === 'b3') Store.setSettings({ beepLast3: t.checked });
+      else if (t.id === 'dial') Store.setSettings({ dial: t.value === 'classic' ? 'classic' : 'ring' });
       else if (t.id === 'cf') Store.setSettings({ countFile: t.checked });
       else if (t.id === 'hv') Store.setSettings({ halfVoice: t.checked });
       else if (t.id === 'wv') Store.setSettings({ wellVoice: t.checked });
