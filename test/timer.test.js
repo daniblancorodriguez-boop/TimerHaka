@@ -229,4 +229,16 @@ console.log('TODOS LOS TESTS OK');
     t2.forEach((e, i) => { if (i) assert.ok(e.ms >= t2[i - 1].ms, id + ' ordenado (avisos)'); });
   }
   console.log('voces de aviso OK');
+  // ---- Voz «Rest» en los descansos ----
+  const RV = Object.assign({}, ALL, { restVoice: true });
+  tl = Tm.timeline(Tm.buildPlan('tabata', { work: 20, rest: 10, rounds: 2 }), 10, RV);
+  assert.deepStrictEqual(ms(tl, 'restvoice'), [30000, 60000], 'Tabata: «Rest» al empezar el descanso');
+  assert.ok(by(tl, 'rest').every(e => e.silent), 'la voz sustituye al tono (solo vibra)');
+  tl = Tm.timeline(Tm.buildPlan('tabata', { work: 20, rest: 10, rounds: 2 }), 10, ALL);
+  assert.strictEqual(by(tl, 'restvoice').length, 0); assert.ok(by(tl, 'rest').every(e => !e.silent), 'apagada: tono de siempre');
+  tl = Tm.timeline(Tm.buildPlan('emom', { interval: 60, rounds: 3 }), 10, RV);
+  assert.strictEqual(by(tl, 'restvoice').length, 0, 'EMOM no tiene descansos');
+  tl = Tm.timeline(Tm.buildPlan('rest', { dur: 60 }), 10, RV);
+  assert.strictEqual(by(tl, 'restvoice').length, 0, 'modo Descanso: sin voz (no hay cambio)');
+  console.log('voz Rest OK');
 }

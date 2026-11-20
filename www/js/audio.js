@@ -71,7 +71,7 @@
 
   /* Muestras (archivos en www/audio): cuenta atrás con 3 pitidos + pitido largo, voz «mitad del tiempo» y voz «Well done».
      La línea SAMPLE_SRC se sustituye por data-URI en HAKATIMER.html (versión de un solo archivo). */
-  var SAMPLE_SRC = { countfile: 'audio/cuenta-atras.mp3', half: 'audio/mitad-tiempo.mp3', well: 'audio/well-done.mp3', lastround: 'audio/ultima-ronda.mp3', lastmin: 'audio/ultimo-minuto.mp3', tensec: 'audio/diez-segundos.mp3' };
+  var SAMPLE_SRC = { countfile: 'audio/cuenta-atras.mp3', half: 'audio/mitad-tiempo.mp3', well: 'audio/well-done.mp3', lastround: 'audio/ultima-ronda.mp3', lastmin: 'audio/ultimo-minuto.mp3', tensec: 'audio/diez-segundos.mp3', restvoice: 'audio/descanso.mp3' };
   var sampleBuf = {}, samplePending = {};
   function loadSample(c, name) {
     if (sampleBuf[name]) return Promise.resolve(sampleBuf[name]);
@@ -167,7 +167,7 @@
         if (SAMPLE_SRC[event]) playSample(event, s.volume, Math.max(0, delaySec), o.offset || 0);
         else playSound(s.sounds[event], event, s.volume, Math.max(0, delaySec));
       }
-      if (event !== 'countfile' && event !== 'well' && event !== 'lastround' && event !== 'lastmin' && event !== 'tensec' && s.vibrate && navigator.vibrate) {
+      if (event !== 'countfile' && event !== 'well' && event !== 'lastround' && event !== 'lastmin' && event !== 'tensec' && event !== 'restvoice' && s.vibrate && navigator.vibrate) {
         var t = setTimeout(function () { vibrate(event, s); }, Math.max(0, delaySec) * 1000);
         vibTimers.push(t);
       }

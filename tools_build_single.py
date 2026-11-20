@@ -10,8 +10,8 @@ for f in ['timer','exercises','store','audio','led','share','shareui','app']:
     assert '</script' not in s
     js+='/* ---- %s.js ---- */\n%s\n'%(f,s)
 js=js.replace("var defaultLogo = 'icons/gym-logo.png';","var defaultLogo = 'data:image/png;base64,%s';"%b64('icons/gym-logo.png'))
-js=js.replace("var SAMPLE_SRC = { countfile: 'audio/cuenta-atras.mp3', half: 'audio/mitad-tiempo.mp3', well: 'audio/well-done.mp3', lastround: 'audio/ultima-ronda.mp3', lastmin: 'audio/ultimo-minuto.mp3', tensec: 'audio/diez-segundos.mp3' };",
-  "var SAMPLE_SRC = { countfile: 'data:audio/mpeg;base64,%s', half: 'data:audio/mpeg;base64,%s', well: 'data:audio/mpeg;base64,%s', lastround: 'data:audio/mpeg;base64,%s', lastmin: 'data:audio/mpeg;base64,%s', tensec: 'data:audio/mpeg;base64,%s' };"%(b64('audio/cuenta-atras.mp3'),b64('audio/mitad-tiempo.mp3'),b64('audio/well-done.mp3'),b64('audio/ultima-ronda.mp3'),b64('audio/ultimo-minuto.mp3'),b64('audio/diez-segundos.mp3')))
+js=js.replace("var SAMPLE_SRC = { countfile: 'audio/cuenta-atras.mp3', half: 'audio/mitad-tiempo.mp3', well: 'audio/well-done.mp3', lastround: 'audio/ultima-ronda.mp3', lastmin: 'audio/ultimo-minuto.mp3', tensec: 'audio/diez-segundos.mp3', restvoice: 'audio/descanso.mp3' };",
+  "var SAMPLE_SRC = { countfile: 'data:audio/mpeg;base64,%s', half: 'data:audio/mpeg;base64,%s', well: 'data:audio/mpeg;base64,%s', lastround: 'data:audio/mpeg;base64,%s', lastmin: 'data:audio/mpeg;base64,%s', tensec: 'data:audio/mpeg;base64,%s', restvoice: 'data:audio/mpeg;base64,%s' };"%(b64('audio/cuenta-atras.mp3'),b64('audio/mitad-tiempo.mp3'),b64('audio/well-done.mp3'),b64('audio/ultima-ronda.mp3'),b64('audio/ultimo-minuto.mp3'),b64('audio/diez-segundos.mp3'),b64('audio/descanso.mp3')))
 assert 'data:audio/mpeg' in js
 html=open(w+'index.html',encoding='utf8').read()
 html=html.replace('<link rel="manifest" href="manifest.webmanifest">\n','')

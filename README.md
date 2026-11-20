@@ -130,3 +130,6 @@ La pantalla de compartir es ahora un editor sobre la propia tarjeta:
 
 Se activan o desactivan juntas en Ajustes. Si en ese instante suena el archivo de cuenta atrás, la voz entra justo cuando éste termina.
 
+### Voz «Rest»
+
+Al empezar cada descanso (Tabata, Intervalos, Trabajo = descanso, AMRAP con descansos, Fight Gone Bad) suena la voz «Rest» en lugar del tono grave; la vibración se mantiene. Se puede apagar en Ajustes para volver al tono de siempre.

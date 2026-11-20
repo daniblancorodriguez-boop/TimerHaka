@@ -186,7 +186,7 @@
 
   /* Muestras de audio (www/audio): el pitido largo del archivo de cuenta atrás empieza en el ms 3020, así que el archivo
      se arranca 3,02 s antes de cada cambio para que el pitido largo caiga justo en él. */
-  var COUNT_LEAD_MS = 3020, COUNT_LEN_MS = 4049, HALF_LEN_MS = 1000, LAST_LEN_MS = 1300, MIN_LEN_MS = 1170, TEN_LEN_MS = 1380, VOICE_AFTER_FILE_MS = 1100, VOICE_GAP_MS = 150, WELL_LEN_MS = 900, WELL_DELAY_MS = 1250, HALF_MIN_SEC = 15;
+  var COUNT_LEAD_MS = 3020, COUNT_LEN_MS = 4049, HALF_LEN_MS = 1000, REST_LEN_MS = 830, LAST_LEN_MS = 1300, MIN_LEN_MS = 1170, TEN_LEN_MS = 1380, VOICE_AFTER_FILE_MS = 1100, VOICE_GAP_MS = 150, WELL_LEN_MS = 900, WELL_DELAY_MS = 1250, HALF_MIN_SEC = 15;
 
   /* Línea de tiempo de sonidos: [{ev, ms}] ordenada, con ms desde el pulsar Empezar.
      Es lo que permite programar los pitidos por adelantado en el reloj de audio.
@@ -198,6 +198,7 @@
        alerts      voces «Last round!» (inicio de la última ronda en EMOM, Tabata, Intervalos, Trabajo=descanso, FGB y AMRAP con descansos),
                    «Last minute!» (falta 1 min, entreno ≥ 2 min; no si coincide con Last round o Half time) y «Ten seconds!» (faltan 10 s, entreno ≥ 30 s).
                    Si en ese instante suena el archivo de cuenta atrás, la voz entra cuando éste acaba (1,1 s después).
+       restVoice   voz «Rest» al empezar cada descanso (sustituye al tono grave de descanso)
        wellDone    voz «Well done» 1,25 s después de la bocina final */
   var LAST_ROUND_MODES = ['emom', 'tabata', 'interval', 'equal', 'fgb', 'amrapx'];
   function timeline(plan, prepSec, opts) {
@@ -222,6 +223,7 @@
         if (i > 0) {
           e = { ev: sg.type === 'minute' ? 'minute' : sg.type === 'rest' ? 'rest' : 'work', ms: acc };
           if (prevFile) e.silent = true;
+          if (sg.type === 'rest' && opts.restVoice) { e.silent = true; out.push({ ev: 'restvoice', ms: acc, len: REST_LEN_MS }); }   // la voz «Rest» sustituye al tono de descanso (la vibración se conserva)
           out.push(e);
         }
         var next = segs[i + 1];
@@ -333,7 +335,7 @@
     ROTATING: ROTATING, exerciseCount: exerciseCount, validateLines: validateLines,
     MODES: MODES, getMode: getMode, defaultConfig: defaultConfig, fmt: fmt, summary: summary,
     buildPlan: buildPlan, stateAt: stateAt, eventsFor: eventsFor, timeline: timeline,
-    COUNT_LEAD_MS: COUNT_LEAD_MS, COUNT_LEN_MS: COUNT_LEN_MS, HALF_LEN_MS: HALF_LEN_MS, WELL_LEN_MS: WELL_LEN_MS, VOICE_AFTER_FILE_MS: VOICE_AFTER_FILE_MS, VOICE_GAP_MS: VOICE_GAP_MS, LAST_LEN_MS: LAST_LEN_MS, MIN_LEN_MS: MIN_LEN_MS, TEN_LEN_MS: TEN_LEN_MS, WELL_DELAY_MS: WELL_DELAY_MS
+    COUNT_LEAD_MS: COUNT_LEAD_MS, COUNT_LEN_MS: COUNT_LEN_MS, HALF_LEN_MS: HALF_LEN_MS, WELL_LEN_MS: WELL_LEN_MS, VOICE_AFTER_FILE_MS: VOICE_AFTER_FILE_MS, REST_LEN_MS: REST_LEN_MS, VOICE_GAP_MS: VOICE_GAP_MS, LAST_LEN_MS: LAST_LEN_MS, MIN_LEN_MS: MIN_LEN_MS, TEN_LEN_MS: TEN_LEN_MS, WELL_DELAY_MS: WELL_DELAY_MS
   };
   root.Timer = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
