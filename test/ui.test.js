@@ -337,13 +337,13 @@ const www = path.join(__dirname, '..', 'www');
   const resumed = sndCalls.filter(c => c.ev === 'countfile' && c.o.offset > 0).pop();
   assert.ok(resumed && resumed.o.offset > 0.9 && resumed.o.offset < 1.6, 'tras pausar, el archivo sigue por su segundo ' + (resumed && resumed.o.offset));
   // con los interruptores apagados no se programan
-  w.Store.setSettings({ halfVoice: false, wellVoice: false, countFile: false });
+  w.Store.setSettings({ halfVoice: false, wellVoice: false, countFile: false, goVoice: false });
   await go('#/'); offset = 0; sndCalls.length = 0;
   await go('#/presets/emom'); click($('[data-prun="p7"]')); await tick(120);
   offset += 39500; await tick(150);
   assert.ok(!sndCalls.some(c => c.ev === 'half' || c.ev === 'countfile' || c.ev === 'well'), 'apagados: suenan solo los pitidos de siempre');
   assert.ok(sndCalls.some(c => c.ev === 'go' && !c.o.silent), 'y el «go» clásico vuelve a sonar');
-  w.Sound.schedule = origSchedule; w.Store.setSettings({ prep: 0, halfVoice: true, wellVoice: true, countFile: true });
+  w.Sound.schedule = origSchedule; w.Store.setSettings({ prep: 0, halfVoice: true, wellVoice: true, countFile: true, goVoice: true });
   await go('#/');
   console.log('Sonidos nuevos UI OK');
 

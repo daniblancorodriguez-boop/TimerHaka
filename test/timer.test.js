@@ -241,4 +241,18 @@ console.log('TODOS LOS TESTS OK');
   tl = Tm.timeline(Tm.buildPlan('rest', { dur: 60 }), 10, RV);
   assert.strictEqual(by(tl, 'restvoice').length, 0, 'modo Descanso: sin voz (no hay cambio)');
   console.log('voz Rest OK');
+  // ---- Voz «Go!» ----
+  const GV = Object.assign({}, ALL, { goVoice: true });
+  tl = Tm.timeline(Tm.buildPlan('tabata', { work: 20, rest: 10, rounds: 2 }), 10, GV);
+  assert.deepStrictEqual(ms(tl, 'govoice'), [10000, 40000], 'Tabata: Go al empezar y tras el descanso');
+  assert.ok(by(tl, 'go').every(e => e.silent) && by(tl, 'work').every(e => e.silent), 'la voz sustituye al pitido (vibra igual)');
+  tl = Tm.timeline(Tm.buildPlan('tabata', { work: 20, rest: 10, rounds: 2 }), 10, ALL);
+  assert.strictEqual(by(tl, 'govoice').length, 0);
+  tl = Tm.timeline(Tm.buildPlan('emom', { interval: 60, rounds: 3 }), 10, GV);
+  assert.deepStrictEqual(ms(tl, 'govoice'), [10000], 'EMOM: solo al empezar (cada minuto ya suena el archivo)');
+  tl = Tm.timeline(Tm.buildPlan('amrap', { dur: 600 }), 2, GV);
+  assert.ok(!by(tl, 'go')[0].ms || by(tl, 'go')[0].silent, 'con cuenta atrás corta también sustituye al go');
+  tl = Tm.timeline(Tm.buildPlan('tabata', { work: 20, rest: 10, rounds: 2 }), 10, Object.assign({ alerts: true }, GV));
+  assert.deepStrictEqual(ms(tl, 'lastround'), [40000 + Tm.GO_LEN_MS + 100], 'Last round espera a que acabe el Go');
+  console.log('voz Go OK');
 }

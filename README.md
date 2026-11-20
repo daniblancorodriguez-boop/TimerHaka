@@ -133,3 +133,7 @@ Se activan o desactivan juntas en Ajustes. Si en ese instante suena el archivo d
 ### Voz «Rest»
 
 Al empezar cada descanso (Tabata, Intervalos, Trabajo = descanso, AMRAP con descansos, Fight Gone Bad) suena la voz «Rest» en lugar del tono grave; la vibración se mantiene. Se puede apagar en Ajustes para volver al tono de siempre.
+
+### Voz «Go!»
+
+Suena al empezar el entreno y al empezar cada intervalo de trabajo después de un descanso (Tabata, Intervalos, Trabajo = descanso, AMRAP con descansos, Fight Gone Bad), en lugar del pitido corto. En EMOM solo suena al empezar (cada minuto ya suena el archivo de cuenta atrás). Al empezar el entreno entra a la vez que el pitido largo. Si coincide con «Last round!», este espera a que termine el «Go!». Se puede apagar en Ajustes.
