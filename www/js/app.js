@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.6.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.7.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -681,7 +681,7 @@
        aunque la pantalla se apague o el navegador ralentice los temporizadores. Pausa/reinicio los cancelan. */
     var useSched = Sound.available(), LOOK = 12000, tlIdx = 0;
     /* Las muestras (cuenta atrás con pitido largo, voces) solo existen con Web Audio; sin él se usan los pitidos de siempre */
-    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, countSample: useSched && settings.countFile, halfway: useSched && settings.halfVoice, wellDone: useSched && settings.wellVoice });
+    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, countSample: useSched && settings.countFile, halfway: useSched && settings.halfVoice, wellDone: useSched && settings.wellVoice, alerts: useSched && settings.alertVoices });
     function partial(e, el) { return !!e.len && el < e.ms + e.len - 100; }     // muestra ya empezada (tras una pausa): se retoma por donde iba
     function schedule() {
       if (!useSched || ready || finished || frozen !== null || pausedAt !== null) return;
@@ -1029,9 +1029,12 @@
       '<label class="switch"><span>Cuenta atrás con 3 pitidos y pitido largo (al empezar y en cada cambio de minuto)</span><input type="checkbox" id="cf"' + (s.countFile ? ' checked' : '') + '></label>' +
       '<label class="switch"><span>Voz «mitad del tiempo superada»</span><input type="checkbox" id="hv"' + (s.halfVoice ? ' checked' : '') + '></label>' +
       '<p class="s-hint">EMOM y similares: en la mitad de cada tiempo de trabajo. AMRAP y For Time con límite: en la mitad del tiempo total.</p>' +
+      '<label class="switch"><span>Voces de aviso: «Last round!», «Last minute!» y «Ten seconds!»</span><input type="checkbox" id="av"' + (s.alertVoices ? ' checked' : '') + '></label>' +
+      '<p class="s-hint">«Last round!» al empezar la última ronda (EMOM, Tabata, Intervalos, Trabajo = descanso, Fight Gone Bad y AMRAP con descansos). «Last minute!» a falta de 1 minuto (entrenos de 2 min o más). «Ten seconds!» a falta de 10 segundos (entrenos de 30 s o más).</p>' +
       '<label class="switch"><span>Voz «Well done» al terminar (después de la bocina)</span><input type="checkbox" id="wv"' + (s.wellVoice ? ' checked' : '') + '></label>' +
       '<div class="row" style="flex-wrap:wrap;margin:6px 0 10px"><button class="btn small" data-sample="countfile">' + ICON.play + 'Cuenta atrás</button>' +
-      '<button class="btn small" data-sample="half">' + ICON.play + 'Mitad</button><button class="btn small" data-sample="well">' + ICON.play + 'Well done</button></div>' +
+      '<button class="btn small" data-sample="half">' + ICON.play + 'Mitad</button><button class="btn small" data-sample="well">' + ICON.play + 'Well done</button>' +
+      '<button class="btn small" data-sample="lastround">' + ICON.play + 'Last round</button><button class="btn small" data-sample="lastmin">' + ICON.play + 'Last minute</button><button class="btn small" data-sample="tensec">' + ICON.play + 'Ten seconds</button></div>' +
       '<label class="switch"><span>Vibración</span><input type="checkbox" id="vib"' + (s.vibrate ? ' checked' : '') + '></label>' +
       '<div class="field"><div class="flabel">Volumen</div><input type="range" id="vol" min="0" max="1" step="0.05" value="' + s.volume + '" aria-label="Volumen"></div></div>' +
       '<div class="panel"><h2>Sonidos</h2>' +
@@ -1051,6 +1054,7 @@
       else if (t.id === 'dial') Store.setSettings({ dial: t.value === 'classic' ? 'classic' : 'ring' });
       else if (t.id === 'cf') Store.setSettings({ countFile: t.checked });
       else if (t.id === 'hv') Store.setSettings({ halfVoice: t.checked });
+      else if (t.id === 'av') Store.setSettings({ alertVoices: t.checked });
       else if (t.id === 'wv') Store.setSettings({ wellVoice: t.checked });
       else if (t.id === 'vib') Store.setSettings({ vibrate: t.checked });
       else if (t.id === 'vol') { Store.setSettings({ volume: +t.value }); }

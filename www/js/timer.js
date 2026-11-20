@@ -186,7 +186,7 @@
 
   /* Muestras de audio (www/audio): el pitido largo del archivo de cuenta atrás empieza en el ms 3020, así que el archivo
      se arranca 3,02 s antes de cada cambio para que el pitido largo caiga justo en él. */
-  var COUNT_LEAD_MS = 3020, COUNT_LEN_MS = 4049, HALF_LEN_MS = 1000, WELL_LEN_MS = 900, WELL_DELAY_MS = 1250, HALF_MIN_SEC = 15;
+  var COUNT_LEAD_MS = 3020, COUNT_LEN_MS = 4049, HALF_LEN_MS = 1000, LAST_LEN_MS = 1300, MIN_LEN_MS = 1170, TEN_LEN_MS = 1380, VOICE_AFTER_FILE_MS = 1100, VOICE_GAP_MS = 150, WELL_LEN_MS = 900, WELL_DELAY_MS = 1250, HALF_MIN_SEC = 15;
 
   /* Línea de tiempo de sonidos: [{ev, ms}] ordenada, con ms desde el pulsar Empezar.
      Es lo que permite programar los pitidos por adelantado en el reloj de audio.
@@ -195,7 +195,11 @@
        countSample en el arranque y en cada cambio de «minuto» (EMOM, Fight Gone Bad) suena el archivo de cuenta atrás
                    (3 pitidos + largo) en lugar de los pitidos sueltos; los eventos sustituidos quedan con silent:true (solo vibran)
        halfway     voz «mitad del tiempo superada» a la mitad de cada tiempo de trabajo (≥ 15 s) y, en For Time con límite, del límite
+       alerts      voces «Last round!» (inicio de la última ronda en EMOM, Tabata, Intervalos, Trabajo=descanso, FGB y AMRAP con descansos),
+                   «Last minute!» (falta 1 min, entreno ≥ 2 min; no si coincide con Last round o Half time) y «Ten seconds!» (faltan 10 s, entreno ≥ 30 s).
+                   Si en ese instante suena el archivo de cuenta atrás, la voz entra cuando éste acaba (1,1 s después).
        wellDone    voz «Well done» 1,25 s después de la bocina final */
+  var LAST_ROUND_MODES = ['emom', 'tabata', 'interval', 'equal', 'fgb', 'amrapx'];
   function timeline(plan, prepSec, opts) {
     opts = opts || {};
     var out = [], P = prepSec * 1000, r, e;
@@ -203,7 +207,7 @@
     if (fileStart) out.push({ ev: 'countfile', ms: P - COUNT_LEAD_MS, len: COUNT_LEN_MS });
     for (r = Math.min(3, prepSec); r >= 1; r--) { e = { ev: 'countdown', ms: P - r * 1000 }; if (fileStart) e.silent = true; out.push(e); }
     e = { ev: 'go', ms: P }; if (fileStart) e.silent = true; out.push(e);
-    var endMs, hasWork = plan.kind === 'up';
+    var endMs, hasWork = plan.kind === 'up', fb = fileStart ? [P] : [], lastRoundMs = -1;
     if (plan.kind === 'up') {
       if (plan.cap) {
         endMs = P + plan.cap * 1000;
@@ -214,6 +218,7 @@
       var acc = P, segs = plan.segments, prevFile = false;
       segs.forEach(function (sg, i) {
         if (sg.type !== 'rest') hasWork = true;
+        if (i > 0 && prevFile) fb.push(acc);
         if (i > 0) {
           e = { ev: sg.type === 'minute' ? 'minute' : sg.type === 'rest' ? 'rest' : 'work', ms: acc };
           if (prevFile) e.silent = true;
@@ -229,6 +234,23 @@
       });
       endMs = acc;
       out.push({ ev: 'end', ms: endMs });
+      if (LAST_ROUND_MODES.indexOf(plan.mode) > -1 && segs.length) {
+        var lr = segs[segs.length - 1].round, acc2 = P;
+        if (lr > 1) {
+          for (var q = 0; q < segs.length; q++) { if (segs[q].round === lr) { lastRoundMs = acc2; break; } acc2 += segs[q].dur * 1000; }
+        }
+      }
+    }
+    if (opts.alerts && endMs !== undefined) {
+      var at = function (ms) { return ms + (fb.indexOf(ms) > -1 ? VOICE_AFTER_FILE_MS : VOICE_GAP_MS); };
+      var total = endMs - P;
+      if (lastRoundMs > -1) out.push({ ev: 'lastround', ms: at(lastRoundMs), len: LAST_LEN_MS });
+      if (total >= 120000) {
+        var lm = endMs - 60000, clash = lastRoundMs > -1 && Math.abs(lastRoundMs - lm) < 1500;
+        out.forEach(function (x) { if (x.ev === 'half' && Math.abs(x.ms - lm) < 1500) clash = true; });
+        if (!clash) out.push({ ev: 'lastmin', ms: at(lm), len: MIN_LEN_MS });
+      }
+      if (total >= 30000) out.push({ ev: 'tensec', ms: at(endMs - 10000), len: TEN_LEN_MS });
     }
     if (opts.wellDone && hasWork && endMs !== undefined) out.push({ ev: 'well', ms: endMs + WELL_DELAY_MS, len: WELL_LEN_MS });
     return out.sort(function (a, b) { return a.ms - b.ms; });
@@ -311,7 +333,7 @@
     ROTATING: ROTATING, exerciseCount: exerciseCount, validateLines: validateLines,
     MODES: MODES, getMode: getMode, defaultConfig: defaultConfig, fmt: fmt, summary: summary,
     buildPlan: buildPlan, stateAt: stateAt, eventsFor: eventsFor, timeline: timeline,
-    COUNT_LEAD_MS: COUNT_LEAD_MS, COUNT_LEN_MS: COUNT_LEN_MS, HALF_LEN_MS: HALF_LEN_MS, WELL_LEN_MS: WELL_LEN_MS, WELL_DELAY_MS: WELL_DELAY_MS
+    COUNT_LEAD_MS: COUNT_LEAD_MS, COUNT_LEN_MS: COUNT_LEN_MS, HALF_LEN_MS: HALF_LEN_MS, WELL_LEN_MS: WELL_LEN_MS, VOICE_AFTER_FILE_MS: VOICE_AFTER_FILE_MS, VOICE_GAP_MS: VOICE_GAP_MS, LAST_LEN_MS: LAST_LEN_MS, MIN_LEN_MS: MIN_LEN_MS, TEN_LEN_MS: TEN_LEN_MS, WELL_DELAY_MS: WELL_DELAY_MS
   };
   root.Timer = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

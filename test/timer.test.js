@@ -190,4 +190,43 @@ console.log('TODOS LOS TESTS OK');
     t2.forEach((e, i) => { if (i) assert.ok(e.ms >= t2[i - 1].ms, id + ' ordenado'); assert.ok(e.ms >= 0, id + ' sin tiempos negativos'); });
   }
   console.log('sonidos nuevos (cuenta atrás, mitad, Well done) OK');
+
+  // ---- Voces de aviso: Last round! / Last minute! / Ten seconds! ----
+  const AL = Object.assign({}, ALL, { alerts: true });
+  const ms = (t, ev) => by(t, ev).map(e => e.ms);
+  tl = Tm.timeline(Tm.buildPlan('emom', { interval: 60, rounds: 5 }), 10, AL);
+  assert.deepStrictEqual(ms(tl, 'lastround'), [10000 + 240000 + Tm.VOICE_AFTER_FILE_MS], 'EMOM: Last round tras el archivo de cuenta atrás');
+  assert.strictEqual(by(tl, 'lastmin').length, 0, 'EMOM: la última ronda ya es el último minuto, no se repite');
+  assert.deepStrictEqual(ms(tl, 'tensec'), [310000 - 10000 + Tm.VOICE_GAP_MS]);
+  tl = Tm.timeline(Tm.buildPlan('amrap', { dur: 1200 }), 10, AL);
+  assert.strictEqual(by(tl, 'lastround').length, 0, 'AMRAP simple: sin Last round');
+  assert.deepStrictEqual(ms(tl, 'lastmin'), [10000 + 1140000 + Tm.VOICE_GAP_MS]);
+  assert.deepStrictEqual(ms(tl, 'tensec'), [10000 + 1190000 + Tm.VOICE_GAP_MS]);
+  tl = Tm.timeline(Tm.buildPlan('emom', { interval: 60, rounds: 3 }), 10, AL);
+  assert.strictEqual(by(tl, 'lastmin').length, 0);
+  tl = Tm.timeline(Tm.buildPlan('tabata', { work: 20, rest: 10, rounds: 2 }), 10, AL);
+  assert.deepStrictEqual(ms(tl, 'lastround'), [10000 + 30000 + Tm.VOICE_GAP_MS], 'Tabata: Last round al empezar la 2ª ronda');
+  assert.strictEqual(by(tl, 'lastmin').length, 0, 'entreno de 1 min: sin Last minute');
+  assert.strictEqual(by(tl, 'tensec').length, 1);
+  tl = Tm.timeline(Tm.buildPlan('tabata', { work: 10, rest: 2, rounds: 2 }), 10, AL);
+  assert.strictEqual(by(tl, 'tensec').length, 0, 'entreno de menos de 30 s: sin Ten seconds');
+  tl = Tm.timeline(Tm.buildPlan('fortime', { cap: 600 }), 10, AL);
+  assert.strictEqual(by(tl, 'lastround').length, 0, 'For Time: sin Last round');
+  assert.deepStrictEqual(ms(tl, 'lastmin'), [10000 + 540000 + Tm.VOICE_GAP_MS]);
+  tl = Tm.timeline(Tm.buildPlan('fortime', { cap: 0 }), 10, AL);
+  assert.strictEqual(by(tl, 'lastmin').length + by(tl, 'tensec').length, 0, 'For Time sin límite: sin avisos');
+  tl = Tm.timeline(Tm.buildPlan('rest', { dur: 120 }), 10, AL);
+  assert.strictEqual(by(tl, 'lastround').length, 0, 'Descanso: sin Last round');
+  // Last minute coincide con Half time (último tramo de 2 min): solo suena «half»
+  tl = Tm.timeline(Tm.buildPlan('amrap', { dur: 120 }), 10, Object.assign({}, AL, { halfway: true }));
+  assert.strictEqual(by(tl, 'half').length, 1); assert.strictEqual(by(tl, 'lastmin').length, 0, 'no se repite con Half time');
+  // avisos apagados = igual que antes
+  const noAl = Tm.timeline(Tm.buildPlan('emom', { interval: 60, rounds: 5 }), 10, ALL);
+  assert.strictEqual(['lastround', 'lastmin', 'tensec'].reduce((n, k) => n + by(noAl, k).length, 0), 0);
+  for (const id of Tm.MODES.map(m => m.id).filter(i => i !== 'counter')) {
+    const pl = Tm.buildPlan(id, Tm.defaultConfig(id)); if (pl.kind === 'up') pl.cap = 300;
+    const t2 = Tm.timeline(pl, 10, AL);
+    t2.forEach((e, i) => { if (i) assert.ok(e.ms >= t2[i - 1].ms, id + ' ordenado (avisos)'); });
+  }
+  console.log('voces de aviso OK');
 }

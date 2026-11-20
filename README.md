@@ -118,3 +118,14 @@ La pantalla de compartir es ahora un editor sobre la propia tarjeta:
 - Sustituye a las casillas anteriores (Mostrar ejercicios, cartel, marcador…): ahora se quita el elemento. El formato horizontal 16:9 se ha retirado.
 - **Deshacer** (arriba de la tarjeta): vuelve atrás paso a paso hasta el inicio (mover, tamaño, giro, estilo, capas, plantilla, formato, fotos y vídeos, eliminar/añadir). Muestra cuántos pasos hay.
 - Tocar **fuera de la tarjeta** quita la selección.
+
+### Voces de aviso (en inglés)
+
+| Voz | Cuándo suena |
+|---|---|
+| «Last round!» | Al empezar la última ronda de EMOM, Tabata, Intervalos, Trabajo = descanso, Fight Gone Bad y AMRAP con descansos. No en AMRAP simple, For Time ni Descanso. |
+| «Last minute!» | Cuando falta 1 minuto, si el entreno dura 2 min o más. No se repite si coincide con «Last round!» o «Half time!». |
+| «Ten seconds!» | Cuando faltan 10 segundos, si el entreno dura 30 s o más. Los 3 pitidos finales siguen después. |
+
+Se activan o desactivan juntas en Ajustes. Si en ese instante suena el archivo de cuenta atrás, la voz entra justo cuando éste termina.
+
