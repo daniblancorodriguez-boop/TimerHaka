@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.8.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.8.2';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -549,7 +549,7 @@
   function stageHtml() {
     var leds = '<div class="led" id="led-blue" role="img" aria-label="Rondas"></div>' +
       '<div class="led" id="led-red" role="img" aria-label="Tiempo"></div>';
-    var bigUi = '<div class="big-phase" id="big-phase" aria-hidden="true"></div><button class="big-off" id="big-off" aria-label="Salir del reloj grande">×</button>';
+    var bigUi = '<div class="big-phase" id="big-phase" aria-hidden="true"></div><button class="big-pp" id="big-pp" aria-label="Iniciar"></button><button class="big-off" id="big-off" aria-label="Salir del reloj grande">×</button>';
     if (!dialIsRing()) return '<div class="stage"><div class="bezel"><div class="display">' + leds + '</div></div>' + bigUi + '</div>';
     var t = '';
     for (var i = 0; i < 60; i++) t += '<line class="tk on' + (i % 5 === 0 ? ' big' : '') + '" x1="100" y1="' + (i % 5 === 0 ? 11 : 11) + '" x2="100" y2="' + (i % 5 === 0 ? 29 : 23) + '" transform="rotate(' + (i * 6) + ' 100 100)"/>';
@@ -661,6 +661,7 @@
     }
     function setPauseBtn(paused) {
       $('#pause').innerHTML = (paused || ready ? ICON.play : ICON.pause) + '<span>' + (ready ? 'INICIAR' : paused ? 'Reanudar' : 'Pausa') + '</span>';
+      var bp = $('#big-pp'); if (bp) { bp.innerHTML = paused || ready ? ICON.play : ICON.pause; bp.setAttribute('aria-label', ready ? 'Iniciar entreno' : paused ? 'Reanudar entreno' : 'Pausar entreno'); }
     }
     function fmtDisplay(sec) {
       sec = Math.min(sec, 99 * 60 + 59);
@@ -796,9 +797,10 @@
     }
     $('#big').addEventListener('click', function () { setBig(true); });
     $('#big-off').addEventListener('click', function (e) { e.stopPropagation(); setBig(false); });
+    $('#big-pp').addEventListener('click', function (e) { e.stopPropagation(); togglePause(); });
     /* en reloj grande no se ven los botones: tocar el reloj inicia / pausa / reanuda (tocar las rondas, en modos manuales, suma una) */
     $('.stage').addEventListener('click', function (e) {
-      if (!bigOn || e.target.closest('#big-off') || (manual && e.target.closest('#led-blue'))) return;
+      if (!bigOn || e.target.closest('#big-off') || e.target.closest('#big-pp') || (manual && e.target.closest('#led-blue'))) return;
       togglePause();
     });
     document.addEventListener('fullscreenchange', function onFs() {

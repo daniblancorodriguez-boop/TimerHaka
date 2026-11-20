@@ -394,7 +394,7 @@ svg { overflow: visible; }
 @media (prefers-reduced-motion: reduce) { .run.paused .dial .ticks { animation: none; opacity: .6; } }
 
 /* ---------- Reloj grande (solo reloj y rondas, pantalla completa horizontal) ---------- */
-.big-phase, .big-off { display: none; }
+.big-phase, .big-off, .big-pp { display: none; }
 .run.big { padding: 0; }
 .run.big .top, .run.big .phase, .run.big .ex-panel, .run.big .rounds-bar, .run.big .controls { display: none; }
 .run.big .run-body { padding: 0; gap: 0; background: #000; }
@@ -416,3 +416,7 @@ svg { overflow: visible; }
 .run.big .dial { padding-top: 34px; box-sizing: border-box; }
 .run.big .dial-in { inset: 34px 0 0 0; }
 .run.big .bezel { padding-top: 34px; }
+
+.run.big .big-pp { display: grid; place-items: center; position: absolute; top: 6px; right: 60px; width: 44px; height: 44px; border-radius: 12px; background: var(--orange); color: #111; border: 0; }
+.run.big .big-pp svg { width: 22px; height: 22px; }
+.run.big .big-off, .run.big .big-pp { z-index: 2; }

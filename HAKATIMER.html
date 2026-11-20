@@ -405,7 +405,7 @@ svg { overflow: visible; }
 @media (prefers-reduced-motion: reduce) { .run.paused .dial .ticks { animation: none; opacity: .6; } }
 
 /* ---------- Reloj grande (solo reloj y rondas, pantalla completa horizontal) ---------- */
-.big-phase, .big-off { display: none; }
+.big-phase, .big-off, .big-pp { display: none; }
 .run.big { padding: 0; }
 .run.big .top, .run.big .phase, .run.big .ex-panel, .run.big .rounds-bar, .run.big .controls { display: none; }
 .run.big .run-body { padding: 0; gap: 0; background: #000; }
@@ -427,6 +427,10 @@ svg { overflow: visible; }
 .run.big .dial { padding-top: 34px; box-sizing: border-box; }
 .run.big .dial-in { inset: 34px 0 0 0; }
 .run.big .bezel { padding-top: 34px; }
+
+.run.big .big-pp { display: grid; place-items: center; position: absolute; top: 6px; right: 60px; width: 44px; height: 44px; border-radius: 12px; background: var(--orange); color: #111; border: 0; }
+.run.big .big-pp svg { width: 22px; height: 22px; }
+.run.big .big-off, .run.big .big-pp { z-index: 2; }
 
 </style>
 </head>
@@ -2285,7 +2289,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.8.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.8.2';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -2831,7 +2835,7 @@ svg { overflow: visible; }
   function stageHtml() {
     var leds = '<div class="led" id="led-blue" role="img" aria-label="Rondas"></div>' +
       '<div class="led" id="led-red" role="img" aria-label="Tiempo"></div>';
-    var bigUi = '<div class="big-phase" id="big-phase" aria-hidden="true"></div><button class="big-off" id="big-off" aria-label="Salir del reloj grande">×</button>';
+    var bigUi = '<div class="big-phase" id="big-phase" aria-hidden="true"></div><button class="big-pp" id="big-pp" aria-label="Iniciar"></button><button class="big-off" id="big-off" aria-label="Salir del reloj grande">×</button>';
     if (!dialIsRing()) return '<div class="stage"><div class="bezel"><div class="display">' + leds + '</div></div>' + bigUi + '</div>';
     var t = '';
     for (var i = 0; i < 60; i++) t += '<line class="tk on' + (i % 5 === 0 ? ' big' : '') + '" x1="100" y1="' + (i % 5 === 0 ? 11 : 11) + '" x2="100" y2="' + (i % 5 === 0 ? 29 : 23) + '" transform="rotate(' + (i * 6) + ' 100 100)"/>';
@@ -2943,6 +2947,7 @@ svg { overflow: visible; }
     }
     function setPauseBtn(paused) {
       $('#pause').innerHTML = (paused || ready ? ICON.play : ICON.pause) + '<span>' + (ready ? 'INICIAR' : paused ? 'Reanudar' : 'Pausa') + '</span>';
+      var bp = $('#big-pp'); if (bp) { bp.innerHTML = paused || ready ? ICON.play : ICON.pause; bp.setAttribute('aria-label', ready ? 'Iniciar entreno' : paused ? 'Reanudar entreno' : 'Pausar entreno'); }
     }
     function fmtDisplay(sec) {
       sec = Math.min(sec, 99 * 60 + 59);
@@ -3078,9 +3083,10 @@ svg { overflow: visible; }
     }
     $('#big').addEventListener('click', function () { setBig(true); });
     $('#big-off').addEventListener('click', function (e) { e.stopPropagation(); setBig(false); });
+    $('#big-pp').addEventListener('click', function (e) { e.stopPropagation(); togglePause(); });
     /* en reloj grande no se ven los botones: tocar el reloj inicia / pausa / reanuda (tocar las rondas, en modos manuales, suma una) */
     $('.stage').addEventListener('click', function (e) {
-      if (!bigOn || e.target.closest('#big-off') || (manual && e.target.closest('#led-blue'))) return;
+      if (!bigOn || e.target.closest('#big-off') || e.target.closest('#big-pp') || (manual && e.target.closest('#led-blue'))) return;
       togglePause();
     });
     document.addEventListener('fullscreenchange', function onFs() {
