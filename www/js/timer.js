@@ -184,24 +184,53 @@
     return plan;
   }
 
+  /* Muestras de audio (www/audio): el pitido largo del archivo de cuenta atrás empieza en el ms 3020, así que el archivo
+     se arranca 3,02 s antes de cada cambio para que el pitido largo caiga justo en él. */
+  var COUNT_LEAD_MS = 3020, COUNT_LEN_MS = 4049, HALF_LEN_MS = 1680, WELL_LEN_MS = 900, WELL_DELAY_MS = 1250, HALF_MIN_SEC = 15;
+
   /* Línea de tiempo de sonidos: [{ev, ms}] ordenada, con ms desde el pulsar Empezar.
-     Es lo que permite programar los pitidos por adelantado en el reloj de audio. */
+     Es lo que permite programar los pitidos por adelantado en el reloj de audio.
+     Opciones (todas apagadas por defecto, así el comportamiento clásico no cambia):
+       beepLast3   pitidos 3-2-1 al final de cada intervalo
+       countSample en el arranque y en cada cambio de «minuto» (EMOM, Fight Gone Bad) suena el archivo de cuenta atrás
+                   (3 pitidos + largo) en lugar de los pitidos sueltos; los eventos sustituidos quedan con silent:true (solo vibran)
+       halfway     voz «mitad del tiempo superada» a la mitad de cada tiempo de trabajo (≥ 15 s) y, en For Time con límite, del límite
+       wellDone    voz «Well done» 1,25 s después de la bocina final */
   function timeline(plan, prepSec, opts) {
     opts = opts || {};
-    var out = [], P = prepSec * 1000, r;
-    for (r = Math.min(3, prepSec); r >= 1; r--) out.push({ ev: 'countdown', ms: P - r * 1000 });
-    out.push({ ev: 'go', ms: P });
+    var out = [], P = prepSec * 1000, r, e;
+    var fileStart = !!opts.countSample && P >= COUNT_LEAD_MS;
+    if (fileStart) out.push({ ev: 'countfile', ms: P - COUNT_LEAD_MS, len: COUNT_LEN_MS });
+    for (r = Math.min(3, prepSec); r >= 1; r--) { e = { ev: 'countdown', ms: P - r * 1000 }; if (fileStart) e.silent = true; out.push(e); }
+    e = { ev: 'go', ms: P }; if (fileStart) e.silent = true; out.push(e);
+    var endMs, hasWork = plan.kind === 'up';
     if (plan.kind === 'up') {
-      if (plan.cap) out.push({ ev: 'end', ms: P + plan.cap * 1000 });
+      if (plan.cap) {
+        endMs = P + plan.cap * 1000;
+        if (opts.halfway && plan.cap >= HALF_MIN_SEC) out.push({ ev: 'half', ms: P + plan.cap * 500, len: HALF_LEN_MS });
+        out.push({ ev: 'end', ms: endMs });
+      }
     } else {
-      var acc = P;
-      plan.segments.forEach(function (sg, i) {
-        if (i > 0) out.push({ ev: sg.type === 'minute' ? 'minute' : sg.type === 'rest' ? 'rest' : 'work', ms: acc });
-        if (opts.beepLast3 && sg.dur > 3) for (r = 3; r >= 1; r--) out.push({ ev: 'countdown', ms: acc + (sg.dur - r) * 1000 });
+      var acc = P, segs = plan.segments, prevFile = false;
+      segs.forEach(function (sg, i) {
+        if (sg.type !== 'rest') hasWork = true;
+        if (i > 0) {
+          e = { ev: sg.type === 'minute' ? 'minute' : sg.type === 'rest' ? 'rest' : 'work', ms: acc };
+          if (prevFile) e.silent = true;
+          out.push(e);
+        }
+        var next = segs[i + 1];
+        var file = !!opts.countSample && !!opts.beepLast3 && !!next && next.type === 'minute' && sg.dur * 1000 >= COUNT_LEAD_MS + 300;
+        if (file) out.push({ ev: 'countfile', ms: acc + sg.dur * 1000 - COUNT_LEAD_MS, len: COUNT_LEN_MS });
+        if (opts.beepLast3 && sg.dur > 3) for (r = 3; r >= 1; r--) { e = { ev: 'countdown', ms: acc + (sg.dur - r) * 1000 }; if (file) e.silent = true; out.push(e); }
+        if (opts.halfway && (sg.type === 'minute' || sg.type === 'work') && sg.dur >= HALF_MIN_SEC) out.push({ ev: 'half', ms: acc + sg.dur * 500, len: HALF_LEN_MS });
+        prevFile = file;
         acc += sg.dur * 1000;
       });
-      out.push({ ev: 'end', ms: acc });
+      endMs = acc;
+      out.push({ ev: 'end', ms: endMs });
     }
+    if (opts.wellDone && hasWork && endMs !== undefined) out.push({ ev: 'well', ms: endMs + WELL_DELAY_MS, len: WELL_LEN_MS });
     return out.sort(function (a, b) { return a.ms - b.ms; });
   }
 
@@ -281,7 +310,8 @@
   var api = {
     ROTATING: ROTATING, exerciseCount: exerciseCount, validateLines: validateLines,
     MODES: MODES, getMode: getMode, defaultConfig: defaultConfig, fmt: fmt, summary: summary,
-    buildPlan: buildPlan, stateAt: stateAt, eventsFor: eventsFor, timeline: timeline
+    buildPlan: buildPlan, stateAt: stateAt, eventsFor: eventsFor, timeline: timeline,
+    COUNT_LEAD_MS: COUNT_LEAD_MS, COUNT_LEN_MS: COUNT_LEN_MS, HALF_LEN_MS: HALF_LEN_MS, WELL_LEN_MS: WELL_LEN_MS, WELL_DELAY_MS: WELL_DELAY_MS
   };
   root.Timer = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

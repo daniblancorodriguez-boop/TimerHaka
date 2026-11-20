@@ -117,3 +117,77 @@ console.log('TODOS LOS TESTS OK');
   }
   console.log('timeline coincide con eventsFor en todos los modos');
 }
+
+// ---- Sonidos nuevos: cuenta atrás con archivo, voz de mitad, Well done ----
+{
+  const Tm = require('../www/js/timer.js');
+  const ALL = { beepLast3: true, countSample: true, halfway: true, wellDone: true };
+  const by = (tl, ev) => tl.filter(e => e.ev === ev);
+  const LEAD = Tm.COUNT_LEAD_MS;
+  assert.strictEqual(LEAD, 3020, 'el pitido largo del archivo empieza en 3,02 s');
+
+  // EMOM 3 × 60 s con cuenta atrás de 10 s
+  let tl = Tm.timeline(Tm.buildPlan('emom', { interval: 60, rounds: 3 }), 10, ALL);
+  assert.deepStrictEqual(by(tl, 'countfile').map(e => e.ms), [10000 - LEAD, 70000 - LEAD, 130000 - LEAD], 'archivo de cuenta atrás: al inicio y en cada cambio de minuto');
+  by(tl, 'countfile').forEach(e => assert.strictEqual(e.len, Tm.COUNT_LEN_MS));
+  assert.deepStrictEqual(by(tl, 'half').map(e => e.ms), [40000, 100000, 160000], 'mitad de cada minuto');
+  assert.ok(by(tl, 'go')[0].silent && by(tl, 'minute').every(e => e.silent), 'go y minute no suenan (los cubre el archivo), solo vibran');
+  assert.ok(by(tl, 'countdown').filter(e => e.ms < 190000 - 3500).every(e => e.silent), 'pitidos sueltos sustituidos por el archivo');
+  assert.ok(by(tl, 'countdown').filter(e => e.ms >= 187000).every(e => !e.silent), 'antes del final siguen los 3 pitidos y la bocina');
+  assert.strictEqual(by(tl, 'end')[0].ms, 190000);
+  assert.strictEqual(by(tl, 'well')[0].ms, 190000 + Tm.WELL_DELAY_MS, 'Well done después de la bocina');
+  assert.ok(Tm.WELL_DELAY_MS >= 1100, 'la bocina (1,1 s) termina antes de la voz');
+  // sin choques: el archivo termina en el cambio y la voz de mitad termina antes de que empiece el siguiente archivo
+  assert.ok(100000 + Tm.HALF_LEN_MS < 130000 - LEAD);
+
+  // AMRAP 20': mitad del tiempo total
+  tl = Tm.timeline(Tm.buildPlan('amrap', { dur: 1200 }), 10, ALL);
+  assert.deepStrictEqual(by(tl, 'half').map(e => e.ms), [10000 + 600000]);
+  assert.strictEqual(by(tl, 'countfile').length, 1, 'en AMRAP solo al empezar');
+  assert.strictEqual(by(tl, 'well').length, 1);
+
+  // For Time con límite: mitad del límite; sin límite: nada (acaba a mano)
+  tl = Tm.timeline(Tm.buildPlan('fortime', { cap: 600 }), 10, ALL);
+  assert.deepStrictEqual(by(tl, 'half').map(e => e.ms), [10000 + 300000]);
+  assert.strictEqual(by(tl, 'well')[0].ms, 610000 + Tm.WELL_DELAY_MS);
+  tl = Tm.timeline(Tm.buildPlan('fortime', { cap: 0 }), 10, ALL);
+  assert.strictEqual(by(tl, 'half').length + by(tl, 'well').length, 0);
+
+  // Tabata 20/10: mitad solo del trabajo; el cambio trabajo/descanso conserva sus sonidos
+  tl = Tm.timeline(Tm.buildPlan('tabata', { work: 20, rest: 10, rounds: 2 }), 10, ALL);
+  assert.deepStrictEqual(by(tl, 'half').map(e => e.ms), [20000, 50000]);
+  assert.ok(by(tl, 'rest').concat(by(tl, 'work')).every(e => !e.silent), 'trabajo/descanso suenan como siempre');
+  assert.strictEqual(by(tl, 'countfile').length, 1, 'en trabajo/descanso no se usa el archivo');
+  // intervalo de trabajo corto (< 15 s): sin mitad
+  tl = Tm.timeline(Tm.buildPlan('tabata', { work: 10, rest: 5, rounds: 2 }), 10, ALL);
+  assert.strictEqual(by(tl, 'half').length, 0);
+
+  // Descanso: ni Well done ni mitad
+  tl = Tm.timeline(Tm.buildPlan('rest', { dur: 60 }), 10, ALL);
+  assert.strictEqual(by(tl, 'well').length + by(tl, 'half').length, 0);
+
+  // Cuenta atrás previa demasiado corta: pitidos de siempre al empezar
+  tl = Tm.timeline(Tm.buildPlan('emom', { interval: 60, rounds: 2 }), 3, ALL);
+  assert.ok(by(tl, 'countfile').every(e => e.ms > 3000), 'con 3 s no cabe el archivo al inicio');
+  assert.ok(!by(tl, 'go')[0].silent && by(tl, 'countdown').slice(0, 3).every(e => !e.silent));
+  tl = Tm.timeline(Tm.buildPlan('emom', { interval: 60, rounds: 2 }), 0, ALL);
+  assert.strictEqual(by(tl, 'countfile').filter(e => e.ms < 0).length, 0, 'nunca se programa antes de empezar');
+
+  // Interruptores apagados = comportamiento clásico
+  const plan = Tm.buildPlan('emom', { interval: 60, rounds: 3 });
+  assert.deepStrictEqual(Tm.timeline(plan, 10, { beepLast3: true }), Tm.timeline(plan, 10, { beepLast3: true, countSample: false, halfway: false, wellDone: false }));
+  tl = Tm.timeline(plan, 10, { beepLast3: true, countSample: true });
+  assert.strictEqual(by(tl, 'half').length + by(tl, 'well').length, 0, 'mitad y Well done apagados');
+  tl = Tm.timeline(plan, 10, { beepLast3: false, countSample: true });
+  assert.ok(by(tl, 'minute').every(e => !e.silent), 'sin pitidos 3-2-1 el cambio de minuto conserva su sonido');
+  tl = Tm.timeline(plan, 10, { beepLast3: true, halfway: true });
+  assert.strictEqual(by(tl, 'countfile').length, 0);
+
+  // las líneas de tiempo siguen ordenadas
+  for (const id of Tm.MODES.map(m => m.id).filter(i => i !== 'counter')) {
+    const pl = Tm.buildPlan(id, Tm.defaultConfig(id)); if (pl.kind === 'up') pl.cap = 300;
+    const t2 = Tm.timeline(pl, 10, ALL);
+    t2.forEach((e, i) => { if (i) assert.ok(e.ms >= t2[i - 1].ms, id + ' ordenado'); assert.ok(e.ms >= 0, id + ' sin tiempos negativos'); });
+  }
+  console.log('sonidos nuevos (cuenta atrás, mitad, Well done) OK');
+}

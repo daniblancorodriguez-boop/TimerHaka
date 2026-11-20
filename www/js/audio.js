@@ -69,9 +69,39 @@
     none:   { label: 'Silencio',      play: function () {} }
   };
 
+  /* Muestras (archivos en www/audio): cuenta atrás con 3 pitidos + pitido largo, voz «mitad del tiempo» y voz «Well done».
+     La línea SAMPLE_SRC se sustituye por data-URI en HAKATIMER.html (versión de un solo archivo). */
+  var SAMPLE_SRC = { countfile: 'audio/cuenta-atras.mp3', half: 'audio/mitad-tiempo.mp3', well: 'audio/well-done.mp3' };
+  var sampleBuf = {}, samplePending = {};
+  function loadSample(c, name) {
+    if (sampleBuf[name]) return Promise.resolve(sampleBuf[name]);
+    if (samplePending[name]) return samplePending[name];
+    var p = Promise.resolve().then(function () { return fetch(SAMPLE_SRC[name]); }).then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
+      return new Promise(function (res, rej) { c.decodeAudioData(ab, res, rej); });
+    }).then(function (buf) { sampleBuf[name] = buf; delete samplePending[name]; return buf; })
+      .catch(function (e) { delete samplePending[name]; throw e; });
+    samplePending[name] = p; return p;
+  }
+  /* Reproduce una muestra dentro de `delay` s empezando en el segundo `offset` del archivo.
+     Si el audio aún no estaba decodificado y llega tarde, salta al punto que corresponde para no desalinear el pitido largo. */
+  function playSample(name, volume, delay, offset) {
+    var c = ensure();
+    if (!c || !SAMPLE_SRC[name]) return;
+    var dest = master(c, volume), when = c.currentTime + (delay || 0), off = offset || 0;
+    function go(buf) {
+      var t = when, o = off, late = c.currentTime - t;
+      if (late > 0) { o += late; t = c.currentTime; }
+      if (o >= buf.duration - 0.05) return;
+      var src = c.createBufferSource();
+      src.buffer = buf; src.connect(dest); src.start(t, o); track(src);
+    }
+    if (sampleBuf[name]) go(sampleBuf[name]);
+    else loadSample(c, name).then(go).catch(function () {});
+  }
+
   var vibTimers = [];
   /* Vibración distinta por tipo: pulso corto = trabajo, largo = descanso */
-  var VIB = { countdown: 40, go: 400, minute: [200, 100, 200], work: [90, 70, 90], rest: 700, end: [300, 120, 300, 120, 600] };
+  var VIB = { countdown: 40, go: 400, minute: [200, 100, 200], work: [90, 70, 90], rest: 700, end: [300, 120, 300, 120, 600], half: [120, 60, 120] };
   function vibrate(event, s) { if (s.vibrate && navigator.vibrate) navigator.vibrate(VIB[event] || 120); }
 
   /* Ajuste recomendado de accesibilidad: cada evento suena distinto (corto y agudo = trabajo, largo y grave = descanso) */
@@ -113,16 +143,22 @@
     /* Reproduce el sonido configurado para un evento: countdown, go, minute, work, rest, end */
     play: function (event) {
       var s = root.Store.settings();
+      if (SAMPLE_SRC[event]) { playSample(event, s.volume, 0, 0); vibrate(event, s); return; }
       playSound(s.sounds[event], event, s.volume);
       vibrate(event, s);
     },
     /* Programa el sonido en el reloj de audio para dentro de `delaySec` segundos (exacto aunque la página vaya lenta).
        Devuelve false si no hay Web Audio (entonces hay que usar play() en el momento). */
-    schedule: function (event, delaySec) {
+    /* o (opcional): { silent: no suena, solo vibra · offset: segundo del archivo por el que empezar (muestras) } */
+    schedule: function (event, delaySec, o) {
       var s = root.Store.settings();
       if (!ensure()) return false;
-      playSound(s.sounds[event], event, s.volume, Math.max(0, delaySec));
-      if (s.vibrate && navigator.vibrate) {
+      o = o || {};
+      if (!o.silent) {
+        if (SAMPLE_SRC[event]) playSample(event, s.volume, Math.max(0, delaySec), o.offset || 0);
+        else playSound(s.sounds[event], event, s.volume, Math.max(0, delaySec));
+      }
+      if (event !== 'countfile' && event !== 'well' && s.vibrate && navigator.vibrate) {
         var t = setTimeout(function () { vibrate(event, s); }, Math.max(0, delaySec) * 1000);
         vibTimers.push(t);
       }
@@ -141,9 +177,11 @@
       var c = ensure(), s = root.Store.settings();
       if (!c) return;
       Object.keys(s.sounds).forEach(function (k) { var sn = s.sounds[k]; if (sn && sn.preset === 'custom' && sn.data) decode(c, k, sn).catch(function () {}); });
+      Object.keys(SAMPLE_SRC).forEach(function (k) { loadSample(c, k).catch(function () {}); });
     },
     preview: function (event) {
       var s = root.Store.settings();
+      if (SAMPLE_SRC[event]) { playSample(event, s.volume, 0, 0); return; }
       playSound(s.sounds[event], event, s.volume);
     },
     /* Convierte un archivo de audio en dataURL para guardarlo (máx. ~700 KB) */

@@ -1,11 +1,12 @@
 /* Service worker de HAKATIMER: funciona sin conexión */
-const CACHE = 'hakatimer-v15';
+const CACHE = 'hakatimer-v16';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/timer.js', 'js/exercises.js', 'js/store.js', 'js/audio.js', 'js/led.js', 'js/share.js', 'js/shareui.js', 'js/app.js',
   'fonts/barlow-condensed-latin-600-normal.woff2', 'fonts/barlow-condensed-latin-700-normal.woff2',
   'fonts/barlow-condensed-latin-700-italic.woff2', 'fonts/barlow-condensed-latin-800-italic.woff2',
-  'icons/gym-logo.png', 'icons/icon-192.png', 'icons/icon-512.png'
+  'icons/gym-logo.png', 'icons/icon-192.png', 'icons/icon-512.png',
+  'audio/cuenta-atras.mp3', 'audio/mitad-tiempo.mp3', 'audio/well-done.mp3'
 ];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(

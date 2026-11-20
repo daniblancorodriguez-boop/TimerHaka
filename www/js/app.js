@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.5.6';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.5.7';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -654,19 +654,24 @@
     var shareMode = false;
     /* Sonidos: se programan por adelantado en el reloj de audio (12 s de margen), así suenan exactos
        aunque la pantalla se apague o el navegador ralentice los temporizadores. Pausa/reinicio los cancelan. */
-    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3 }), tlIdx = 0, useSched = Sound.available(), LOOK = 12000;
+    var useSched = Sound.available(), LOOK = 12000, tlIdx = 0;
+    /* Las muestras (cuenta atrás con pitido largo, voces) solo existen con Web Audio; sin él se usan los pitidos de siempre */
+    var tl = T.timeline(plan, prep, { beepLast3: settings.beepLast3, countSample: useSched && settings.countFile, halfway: useSched && settings.halfVoice, wellDone: useSched && settings.wellVoice });
+    function partial(e, el) { return !!e.len && el < e.ms + e.len - 100; }     // muestra ya empezada (tras una pausa): se retoma por donde iba
     function schedule() {
       if (!useSched || finished || frozen !== null || pausedAt !== null) return;
       var el = elapsed();
       while (tlIdx < tl.length && tl[tlIdx].ms <= el + LOOK) {
-        if (tl[tlIdx].ms >= el - 150) Sound.schedule(tl[tlIdx].ev, (tl[tlIdx].ms - el) / 1000);
+        var e = tl[tlIdx];
+        if (e.ms >= el - 150) Sound.schedule(e.ev, (e.ms - el) / 1000, e);
+        else if (partial(e, el)) Sound.schedule(e.ev, 0, { silent: e.silent, offset: (el - e.ms) / 1000 });
         tlIdx++;
       }
     }
     function rewind() {
       Sound.cancelAll();
       var el = elapsed(); tlIdx = 0;
-      while (tlIdx < tl.length && tl[tlIdx].ms < el - 150) tlIdx++;
+      while (tlIdx < tl.length && tl[tlIdx].ms < el - 150 && !partial(tl[tlIdx], el)) tlIdx++;
     }
     function buildResult() {
       var id = pending.mode, sec = Math.max(0, Math.floor(elapsed() / 1000 - prep + 0.001));
@@ -729,7 +734,7 @@
       if (finished) return;
       frozen = at; pausedAt = null; run.classList.remove('paused');
       Sound.cancelAll();
-      if (plan.kind === 'up') Sound.play('end');
+      if (plan.kind === 'up') { Sound.play('end'); if (settings.wellVoice) Sound.schedule('well', T.WELL_DELAY_MS / 1000); }
       tick();
     }
     $('#finish').addEventListener('click', function () {
@@ -969,6 +974,12 @@
       '<div class="panel"><h2>Cuenta atrás</h2>' +
       '<div class="field"><div class="flabel">Cuenta atrás antes de empezar</div><select class="text-in" id="prep">' + prepOpts + '</select></div>' +
       '<label class="switch"><span>Pitidos 3, 2, 1 al final de cada intervalo</span><input type="checkbox" id="b3"' + (s.beepLast3 ? ' checked' : '') + '></label>' +
+      '<label class="switch"><span>Cuenta atrás con 3 pitidos y pitido largo (al empezar y en cada cambio de minuto)</span><input type="checkbox" id="cf"' + (s.countFile ? ' checked' : '') + '></label>' +
+      '<label class="switch"><span>Voz «mitad del tiempo superada»</span><input type="checkbox" id="hv"' + (s.halfVoice ? ' checked' : '') + '></label>' +
+      '<p class="s-hint">EMOM y similares: en la mitad de cada tiempo de trabajo. AMRAP y For Time con límite: en la mitad del tiempo total.</p>' +
+      '<label class="switch"><span>Voz «Well done» al terminar (después de la bocina)</span><input type="checkbox" id="wv"' + (s.wellVoice ? ' checked' : '') + '></label>' +
+      '<div class="row" style="flex-wrap:wrap;margin:6px 0 10px"><button class="btn small" data-sample="countfile">' + ICON.play + 'Cuenta atrás</button>' +
+      '<button class="btn small" data-sample="half">' + ICON.play + 'Mitad</button><button class="btn small" data-sample="well">' + ICON.play + 'Well done</button></div>' +
       '<label class="switch"><span>Vibración</span><input type="checkbox" id="vib"' + (s.vibrate ? ' checked' : '') + '></label>' +
       '<div class="field"><div class="flabel">Volumen</div><input type="range" id="vol" min="0" max="1" step="0.05" value="' + s.volume + '" aria-label="Volumen"></div></div>' +
       '<div class="panel"><h2>Sonidos</h2>' +
@@ -985,6 +996,9 @@
       var t = e.target;
       if (t.id === 'prep') Store.setSettings({ prep: +t.value });
       else if (t.id === 'b3') Store.setSettings({ beepLast3: t.checked });
+      else if (t.id === 'cf') Store.setSettings({ countFile: t.checked });
+      else if (t.id === 'hv') Store.setSettings({ halfVoice: t.checked });
+      else if (t.id === 'wv') Store.setSettings({ wellVoice: t.checked });
       else if (t.id === 'vib') Store.setSettings({ vibrate: t.checked });
       else if (t.id === 'vol') { Store.setSettings({ volume: +t.value }); }
       else if (t.id === 'gym') Store.setSettings({ gymName: t.value.trim() });
@@ -1006,8 +1020,9 @@
       }
     }
     function onClick(e) {
-      var tb = e.target.closest('[data-test]');
+      var tb = e.target.closest('[data-test]'), sb = e.target.closest('[data-sample]');
       if (tb) { Sound.unlock(); Sound.preview(tb.dataset.test); }
+      if (sb) { Sound.unlock(); Sound.preview(sb.dataset.sample); }
       if (e.target.closest('#snd-access')) {
         Object.keys(Sound.ACCESSIBLE).forEach(function (k) { Store.setSound(k, { preset: Sound.ACCESSIBLE[k] }); });
         Store.setSettings({ vibrate: true }); Sound.unlock(); viewSettings(); toast('Sonidos por tipo aplicados');

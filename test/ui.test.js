@@ -310,6 +310,41 @@ const www = path.join(__dirname, '..', 'www');
   assert.ok(w.Sound.PRESETS.tick && w.Sound.PRESETS.long);
   console.log('Accesibilidad OK');
 
+  // ---- Sonidos nuevos: interruptores en Ajustes y programación real al empezar ----
+  await go('#/settings'); await tick(20);
+  assert.ok($('#cf').checked && $('#hv').checked && $('#wv').checked, 'los tres sonidos nuevos vienen activados');
+  assert.ok($('[data-sample="countfile"]') && $('[data-sample="half"]') && $('[data-sample="well"]'), 'botones para probarlos');
+  $('#hv').checked = false; $('#hv').dispatchEvent(new w.Event('change', { bubbles: true }));
+  assert.strictEqual(w.Store.settings().halfVoice, false, 'el interruptor se guarda');
+  $('#hv').checked = true; $('#hv').dispatchEvent(new w.Event('change', { bubbles: true }));
+  assert.strictEqual(w.Store.settings().halfVoice, true);
+
+  const sndCalls = []; const origSchedule = w.Sound.schedule;
+  w.Sound.schedule = function (ev, d, o) { sndCalls.push({ ev, d, o: o || {} }); return origSchedule.apply(this, arguments); };
+  w.Store.setSettings({ prep: 10 });
+  await go('#/presets/emom'); click($('[data-prun="p7"]')); await tick(120);
+  assert.ok(sndCalls.some(c => c.ev === 'countfile' && Math.abs(c.d - 6.98) < 0.3), 'al empezar se programa el archivo de cuenta atrás (6,98 s)');
+  assert.ok(sndCalls.some(c => c.ev === 'go' && c.o.silent), 'el «go» clásico queda en silencio');
+  offset += 39500; await tick(150);
+  assert.ok(sndCalls.some(c => c.ev === 'half'), 'a los 30 s del primer minuto se programa «mitad del tiempo»');
+  // pausa a mitad del archivo y reanudación: sigue por donde iba
+  await go('#/'); offset = 0;
+  sndCalls.length = 0; await go('#/presets/emom'); click($('[data-prun="p7"]')); await tick(120);
+  offset += 8000; await tick(120);                         // 8 s: el archivo (desde 6,98 s) va por 1 s
+  click($('#pause')); await tick(30); click($('#pause')); await tick(60);
+  const resumed = sndCalls.filter(c => c.ev === 'countfile' && c.o.offset > 0).pop();
+  assert.ok(resumed && resumed.o.offset > 0.9 && resumed.o.offset < 1.6, 'tras pausar, el archivo sigue por su segundo ' + (resumed && resumed.o.offset));
+  // con los interruptores apagados no se programan
+  w.Store.setSettings({ halfVoice: false, wellVoice: false, countFile: false });
+  await go('#/'); offset = 0; sndCalls.length = 0;
+  await go('#/presets/emom'); click($('[data-prun="p7"]')); await tick(120);
+  offset += 39500; await tick(150);
+  assert.ok(!sndCalls.some(c => c.ev === 'half' || c.ev === 'countfile' || c.ev === 'well'), 'apagados: suenan solo los pitidos de siempre');
+  assert.ok(sndCalls.some(c => c.ev === 'go' && !c.o.silent), 'y el «go» clásico vuelve a sonar');
+  w.Sound.schedule = origSchedule; w.Store.setSettings({ prep: 0, halfVoice: true, wellVoice: true, countFile: true });
+  await go('#/');
+  console.log('Sonidos nuevos UI OK');
+
   // ---- Migración: datos de la versión anterior (solo texto) ----
   const old = { presets: [
     { id: 'p2', name: 'viejo', mode: 'amrap', cfg: { dur: 1200 }, desc: 'x' },
