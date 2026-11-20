@@ -388,6 +388,17 @@ const www = path.join(__dirname, '..', 'www');
   click($('#reset')); await tick(60);
   w.Sound.boop = realBoop;
   w.Sound.schedule = origSchedule;
+  // reloj grande con rondas manuales (AMRAP): botones − y +1; EMOM no los muestra
+  assert.ok(!$('.run').classList.contains('manual'), 'EMOM: rondas automáticas');
+  await go('#/'); await go('#/presets/amrap'); click($('[data-prun="p2"]')); await tick(100); click($('#pause')); await tick(60);
+  assert.ok($('.run').classList.contains('manual') && $('#big-plus') && $('#big-minus'));
+  click($('#big')); await tick(30);
+  const b0 = $('#led-blue').innerHTML;
+  click($('#big-plus')); await tick(40); const b1 = $('#led-blue').innerHTML; assert.notStrictEqual(b1, b0, '+1 en reloj grande suma una ronda');
+  click($('#big-plus')); click($('#big-minus')); await tick(40);
+  assert.strictEqual($('#led-blue').innerHTML, b1, '−1 quita una ronda');
+  assert.ok(/Pausa/.test($('#pause').textContent), 'los botones de rondas no pausan el reloj');
+  click($('#big-off')); await tick(20);
   // esfera clásica
   w.Store.setSettings({ dial: 'classic' });
   await go('#/'); await go('#/presets/emom'); click($('[data-prun="p6"]')); await tick(150);

@@ -405,7 +405,7 @@ svg { overflow: visible; }
 @media (prefers-reduced-motion: reduce) { .run.paused .dial .ticks { animation: none; opacity: .6; } }
 
 /* ---------- Reloj grande (solo reloj y rondas, pantalla completa horizontal) ---------- */
-.big-phase, .big-off, .big-pp { display: none; }
+.big-phase, .big-off, .big-pp, .big-rounds { display: none; }
 .run.big { padding: 0; }
 .run.big .top, .run.big .phase, .run.big .ex-panel, .run.big .rounds-bar, .run.big .controls { display: none; }
 .run.big .run-body { padding: 0; gap: 0; background: #000; }
@@ -431,6 +431,13 @@ svg { overflow: visible; }
 .run.big .big-pp { display: grid; place-items: center; position: absolute; top: 6px; right: 60px; width: 44px; height: 44px; border-radius: 12px; background: var(--orange); color: #111; border: 0; }
 .run.big .big-pp svg { width: 22px; height: 22px; }
 .run.big .big-off, .run.big .big-pp { z-index: 2; }
+
+/* reloj grande en modos con rondas manuales: botones − y +1 abajo */
+.run.big.manual .big-rounds { display: flex; gap: 14px; position: absolute; left: 0; right: 0; bottom: 10px; justify-content: center; z-index: 2; }
+.big-rounds button { min-width: 84px; height: 58px; border-radius: 14px; font-size: 34px; font-weight: 800; background: var(--panel); border: 1px solid var(--line); color: var(--chalk); }
+.big-rounds button.plus { min-width: 150px; background: var(--blue); border-color: var(--blue); color: #fff; }
+.run.big.manual .bezel, .run.big.manual .dial { padding-bottom: 76px; box-sizing: border-box; }
+.run.big.manual .dial-in { inset: 34px 0 76px 0; }
 
 </style>
 </head>
@@ -2291,7 +2298,7 @@ svg { overflow: visible; }
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.9.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.9.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -2837,7 +2844,7 @@ svg { overflow: visible; }
   function stageHtml() {
     var leds = '<div class="led" id="led-blue" role="img" aria-label="Rondas"></div>' +
       '<div class="led" id="led-red" role="img" aria-label="Tiempo"></div>';
-    var bigUi = '<div class="big-phase" id="big-phase" aria-hidden="true"></div><button class="big-pp" id="big-pp" aria-label="Iniciar"></button><button class="big-off" id="big-off" aria-label="Salir del reloj grande">×</button>';
+    var bigUi = '<div class="big-phase" id="big-phase" aria-hidden="true"></div><div class="big-rounds"><button id="big-minus" aria-label="Quitar una ronda">−</button><button id="big-plus" class="plus" aria-label="Sumar una ronda">+1</button></div><button class="big-pp" id="big-pp" aria-label="Iniciar"></button><button class="big-off" id="big-off" aria-label="Salir del reloj grande">×</button>';
     if (!dialIsRing()) return '<div class="stage"><div class="bezel"><div class="display">' + leds + '</div></div>' + bigUi + '</div>';
     var t = '';
     for (var i = 0; i < 60; i++) t += '<line class="tk on' + (i % 5 === 0 ? ' big' : '') + '" x1="100" y1="' + (i % 5 === 0 ? 11 : 11) + '" x2="100" y2="' + (i % 5 === 0 ? 29 : 23) + '" transform="rotate(' + (i * 6) + ' 100 100)"/>';
@@ -2930,6 +2937,7 @@ svg { overflow: visible; }
     }
 
     var run = $('.run');
+    if (manual) run.classList.add('manual');
     var blue = new window.LED($('#led-blue'), 'DD'), red = new window.LED($('#led-red'), 'DD:DD');
     var startedAt, pausedTotal, pausedAt, prev, rounds, frozen, finished, ready = true;
 
@@ -3088,7 +3096,7 @@ svg { overflow: visible; }
     $('#big-pp').addEventListener('click', function (e) { e.stopPropagation(); togglePause(); });
     /* en reloj grande no se ven los botones: tocar el reloj inicia / pausa / reanuda (tocar las rondas, en modos manuales, suma una) */
     $('.stage').addEventListener('click', function (e) {
-      if (!bigOn || e.target.closest('#big-off') || e.target.closest('#big-pp') || (manual && e.target.closest('#led-blue'))) return;
+      if (!bigOn || e.target.closest('#big-off') || e.target.closest('#big-pp') || e.target.closest('.big-rounds') || (manual && e.target.closest('#led-blue'))) return;
       togglePause();
     });
     document.addEventListener('fullscreenchange', function onFs() {
@@ -3154,6 +3162,8 @@ svg { overflow: visible; }
       var add = function (d) { if (ready) return; rounds = Math.max(0, Math.min(99, rounds + d)); if (d > 0 && navigator.vibrate && settings.vibrate) navigator.vibrate(30); tick(); };
       $('#plus').addEventListener('click', function () { add(1); });
       $('#minus').addEventListener('click', function () { add(-1); });
+      $('#big-plus').addEventListener('click', function (e) { e.stopPropagation(); add(1); });
+      $('#big-minus').addEventListener('click', function (e) { e.stopPropagation(); add(-1); });
       $('#led-blue').addEventListener('click', function () { add(1); });
     }
     function onKey(e) {
