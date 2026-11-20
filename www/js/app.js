@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.7.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.8.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -41,6 +41,7 @@
     return '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ' + (extra || '') + '>' + inner + '</svg>';
   }
   var ICON = {
+    expand: svg('<path d="M5 12V5h7M27 12V5h-7M5 20v7h7M27 20v7h-7"/>'),
     fortime: svg('<circle cx="16" cy="18" r="10"/><path d="M16 18v-6M13 4h6M16 4v4"/>'),
     amrap: svg('<path d="M26 16a10 10 0 1 1-3-7.1"/><path d="M26 5v5h-5"/>'),
     emom: svg('<path d="M5 14v-2a4 4 0 0 1 4-4h17M22 4l4 4-4 4M27 18v2a4 4 0 0 1-4 4H6M10 28l-4-4 4-4"/>'),
@@ -537,6 +538,7 @@
     return '<div class="screen run" data-type="prep">' +
       '<div class="top"><button class="icon-btn" id="exit" aria-label="Salir">' + ICON.back + '</button>' +
       '<div class="grow"><div class="gymname" style="margin:0">' + esc(label) + '</div></div>' +
+      '<button class="icon-btn" id="big" aria-label="Reloj grande (pantalla completa horizontal)" title="Reloj grande">' + ICON.expand + '</button>' +
       '<img class="gym-logo' + logoCls() + '" src="' + esc(logoSrc()) + '" alt=""></div>' +
       '<h1 class="sr-only">Temporizador</h1><div class="phase" id="phase" aria-live="polite"></div>' +
       '<div class="run-body">' + stageHtml() + (panel || '') + '</div>' + extraBlue;
@@ -547,11 +549,12 @@
   function stageHtml() {
     var leds = '<div class="led" id="led-blue" role="img" aria-label="Rondas"></div>' +
       '<div class="led" id="led-red" role="img" aria-label="Tiempo"></div>';
-    if (!dialIsRing()) return '<div class="stage"><div class="bezel"><div class="display">' + leds + '</div></div></div>';
+    var bigUi = '<div class="big-phase" id="big-phase" aria-hidden="true"></div><button class="big-off" id="big-off" aria-label="Salir del reloj grande">×</button>';
+    if (!dialIsRing()) return '<div class="stage"><div class="bezel"><div class="display">' + leds + '</div></div>' + bigUi + '</div>';
     var t = '';
     for (var i = 0; i < 60; i++) t += '<line class="tk on' + (i % 5 === 0 ? ' big' : '') + '" x1="100" y1="' + (i % 5 === 0 ? 11 : 11) + '" x2="100" y2="' + (i % 5 === 0 ? 29 : 23) + '" transform="rotate(' + (i * 6) + ' 100 100)"/>';
     return '<div class="stage"><div class="dial" id="dial"><svg class="ticks" viewBox="0 0 200 200" aria-hidden="true"><circle class="rim" cx="100" cy="100" r="97"/>' + t + '</svg>' +
-      '<div class="display dial-in" data-layout="col">' + leds + '</div></div></div>';
+      '<div class="display dial-in" data-layout="col">' + leds + '</div></div>' + bigUi + '</div>';
   }
   /* Ajusta el tamaño del círculo al hueco disponible; el tiempo y las rondas se escalan con él */
   function ringFit(stage, dial) {
@@ -673,7 +676,7 @@
         var totalRounds = plan.segments.length ? plan.segments[plan.segments.length - 1].round : 0;
         if (totalRounds > 1 && pending.mode !== 'rest') label = cur.label + ' · ronda ' + cur.round + '/' + totalRounds;
       }
-      $('#phase').textContent = label;
+      $('#phase').textContent = label; $('#big-phase').textContent = label;
       markExercise(cur);
     }
     var shareMode = false;
@@ -754,6 +757,7 @@
           lastResult.presetId = pending.presetId || '';
           lastResult = Store.addResult(lastResult);
         }
+        setBig(false);
         var b = $('#pause'); b.disabled = false; b.innerHTML = ICON.share + '<span>Compartir</span>';
         toast(lastResult.pr ? '¡Nueva marca personal!' : '¡Entreno terminado!');
       }
@@ -766,6 +770,34 @@
     document.addEventListener('visibilitychange', onVisible);
     var unfit = dialIsRing() ? ringFit($('.stage'), $('#dial')) : window.LED.autoFit($('.stage'), $('.display'), $('.bezel'));
 
+    /* Reloj grande: solo reloj y rondas a pantalla completa y en horizontal (si el móvil está en vertical, se gira la imagen) */
+    var bigOn = false;
+    function setBig(on) {
+      if (!!on === !!bigOn) return; bigOn = !!on;
+      run.classList.toggle('big', on);
+      var de = document.documentElement;
+      try {
+        if (on) {
+          if (de.requestFullscreen) { var rq = de.requestFullscreen(); if (rq && rq.catch) rq.catch(function () {}); }
+          if (screen.orientation && screen.orientation.lock) { var lk = screen.orientation.lock('landscape'); if (lk && lk.catch) lk.catch(function () {}); }
+        } else {
+          if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+          if (document.fullscreenElement && document.exitFullscreen) { var ex = document.exitFullscreen(); if (ex && ex.catch) ex.catch(function () {}); }
+        }
+      } catch (e) {}
+      window.dispatchEvent(new Event('resize'));
+    }
+    $('#big').addEventListener('click', function () { setBig(true); });
+    $('#big-off').addEventListener('click', function (e) { e.stopPropagation(); setBig(false); });
+    /* en reloj grande no se ven los botones: tocar el reloj inicia / pausa / reanuda (tocar las rondas, en modos manuales, suma una) */
+    $('.stage').addEventListener('click', function (e) {
+      if (!bigOn || e.target.closest('#big-off') || (manual && e.target.closest('#led-blue'))) return;
+      togglePause();
+    });
+    document.addEventListener('fullscreenchange', function onFs() {
+      if (!document.getElementById('big')) { document.removeEventListener('fullscreenchange', onFs); return; }
+      if (!document.fullscreenElement && bigOn) setBig(false);
+    });
     function startNow() {
       Sound.unlock(); Sound.boop();
       ready = false; startedAt = performance.now(); pausedTotal = 0; pausedAt = null;
@@ -832,7 +864,7 @@
       else if (manual && (e.key === '+' || e.key === 'ArrowUp')) { rounds = Math.min(99, rounds + 1); tick(); }
     }
     document.addEventListener('keydown', onKey);
-    cleanup = function () { runGuard = null; var ls = document.getElementById('leave-sheet'); if (ls) ls.remove(); clearInterval(iv); Sound.cancelAll(); wl(); unfit(); document.removeEventListener('keydown', onKey); document.removeEventListener('visibilitychange', onVisible); };
+    cleanup = function () { setBig(false); runGuard = null; var ls = document.getElementById('leave-sheet'); if (ls) ls.remove(); clearInterval(iv); Sound.cancelAll(); wl(); unfit(); document.removeEventListener('keydown', onKey); document.removeEventListener('visibilitychange', onVisible); };
   }
 
   /* ---------- Compartir (Instagram, etc.) ---------- */

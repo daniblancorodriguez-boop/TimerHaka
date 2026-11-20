@@ -371,7 +371,21 @@ const www = path.join(__dirname, '..', 'www');
   assert.ok(sndCalls.length > 0, 'tras INICIAR se programan los sonidos');
   click($('#reset')); await tick(100);
   assert.ok(/INICIAR/.test($('#pause').textContent) && $$('#dial .tk.on').length === 60, 'Reiniciar vuelve al estado de INICIAR');
-  w.Sound.boop = realBoop; w.Sound.schedule = origSchedule;
+  // reloj grande: solo reloj y rondas; tocar el reloj inicia
+  assert.ok($('#big'), 'botón de reloj grande');
+  click($('#big')); await tick(30);
+  assert.ok($('.run').classList.contains('big'), 'reloj grande activo');
+  booped.length = 0; w.Sound.boop = function () { booped.push(1); };
+  click($('.stage')); await tick(100);
+  assert.strictEqual(booped.length, 1, 'en reloj grande, tocar el reloj = INICIAR');
+  assert.ok(/Pausa/.test($('#pause').textContent));
+  click($('.stage')); await tick(30);
+  assert.ok(/Reanudar/.test($('#pause').textContent), 'tocar otra vez pausa');
+  click($('#big-off')); await tick(30);
+  assert.ok(!$('.run').classList.contains('big') && /Reanudar/.test($('#pause').textContent), 'la × sale del reloj grande sin tocar el reloj');
+  click($('#reset')); await tick(60);
+  w.Sound.boop = realBoop;
+  w.Sound.schedule = origSchedule;
   // esfera clásica
   w.Store.setSettings({ dial: 'classic' });
   await go('#/'); await go('#/presets/emom'); click($('[data-prun="p6"]')); await tick(150);

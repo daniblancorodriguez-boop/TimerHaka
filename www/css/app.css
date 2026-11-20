@@ -384,11 +384,26 @@ svg { overflow: visible; }
 /* ---------- Esfera circular ---------- */
 .dial { position: relative; border-radius: 50%; background: radial-gradient(circle at 50% 45%, #0b0b0d 0%, #000 70%); box-shadow: inset 0 0 30px rgba(0,0,0,.9); flex: none; }
 .dial .ticks { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.dial .rim { fill: none; stroke: var(--orange); stroke-width: 2.4; }
-.dial .tk { stroke: var(--orange); stroke-width: 3.4; stroke-linecap: round; opacity: .14; }
-.dial .tk.big { stroke-width: 4.6; }
+.dial .rim { fill: none; stroke: var(--orange); stroke-width: 1.8; }
+.dial .tk { stroke: var(--orange); stroke-width: 2.1; stroke-linecap: round; opacity: .14; }
+.dial .tk.big { stroke-width: 3.2; }
 .dial .tk.on { opacity: 1; filter: drop-shadow(0 0 2px rgba(231,189,19,.55)); }
 .dial-in { position: absolute; inset: 0; }
 .dial-in #led-blue { --u: var(--ub); }
 .run.paused .dial .ticks { animation: blink 1s steps(2, jump-none) infinite; }
 @media (prefers-reduced-motion: reduce) { .run.paused .dial .ticks { animation: none; opacity: .6; } }
+
+/* ---------- Reloj grande (solo reloj y rondas, pantalla completa horizontal) ---------- */
+.big-phase, .big-off { display: none; }
+.run.big { padding: 0; }
+.run.big .top, .run.big .phase, .run.big .ex-panel, .run.big .rounds-bar, .run.big .controls { display: none; }
+.run.big .run-body { padding: 0; gap: 0; background: #000; }
+.run.big .stage { position: relative; cursor: pointer; }
+.run.big .big-phase { display: block; position: absolute; top: 10px; left: 14px; text-align: left; font-weight: 800; font-style: italic; font-size: 28px; line-height: 1; color: var(--chalk); pointer-events: none; }
+.run[data-type=prep].big .big-phase, .run[data-type=done].big .big-phase { color: var(--orange); }
+.run[data-type=rest].big .big-phase { color: var(--rest); }
+.run.big .big-off { display: grid; place-items: center; position: absolute; top: 6px; right: 8px; width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.08); color: var(--muted); font-size: 30px; line-height: 1; border: 1px solid var(--line); }
+.run.big .bezel { border: 0; background: transparent; box-shadow: none; }
+@media (orientation: portrait) {
+  .run.big .run-body { position: fixed; top: 0; left: 100%; width: 100vh; width: 100dvh; height: 100vw; height: 100dvw; transform-origin: 0 0; transform: rotate(90deg); z-index: 5; }
+}
