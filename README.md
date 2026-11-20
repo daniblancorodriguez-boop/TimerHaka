@@ -66,7 +66,7 @@ iniciándolo al pulsar Empezar y parándolo al salir del reloj, más el permiso 
 ## Sonidos de cuenta atrás y voces
 Archivos en `www/audio/` (se guardan para usar sin conexión):
 - `cuenta-atras.mp3`: 3 pitidos y 1 largo (4 s). Se arranca 3,02 s antes del inicio y de cada cambio de minuto (EMOM, Fight Gone Bad) para que el pitido largo caiga justo en el cambio. Con menos de 4 s de cuenta atrás previa suenan los pitidos de siempre.
-- `mitad-tiempo.mp3`: voz «mitad del tiempo superada». EMOM y modos por intervalos: en la mitad de cada tiempo de trabajo (si dura 15 s o más). AMRAP y For Time con límite: en la mitad del tiempo total. For Time sin límite: no suena.
+- `mitad-tiempo.mp3`: voz «half time». EMOM y modos por intervalos: en la mitad de cada tiempo de trabajo (si dura 15 s o más). AMRAP y For Time con límite: en la mitad del tiempo total. For Time sin límite: no suena.
 - `well-done.mp3`: voz «Well done», 1,25 s después de la bocina final (no suena tras un descanso).
 En Ajustes → Cuenta atrás hay un interruptor para cada uno, y botones para probarlos. Sin Web Audio se usan los pitidos de siempre.
 

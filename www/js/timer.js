@@ -186,7 +186,7 @@
 
   /* Muestras de audio (www/audio): el pitido largo del archivo de cuenta atrás empieza en el ms 3020, así que el archivo
      se arranca 3,02 s antes de cada cambio para que el pitido largo caiga justo en él. */
-  var COUNT_LEAD_MS = 3020, COUNT_LEN_MS = 4049, HALF_LEN_MS = 1680, WELL_LEN_MS = 900, WELL_DELAY_MS = 1250, HALF_MIN_SEC = 15;
+  var COUNT_LEAD_MS = 3020, COUNT_LEN_MS = 4049, HALF_LEN_MS = 1000, WELL_LEN_MS = 900, WELL_DELAY_MS = 1250, HALF_MIN_SEC = 15;
 
   /* Línea de tiempo de sonidos: [{ev, ms}] ordenada, con ms desde el pulsar Empezar.
      Es lo que permite programar los pitidos por adelantado en el reloj de audio.
