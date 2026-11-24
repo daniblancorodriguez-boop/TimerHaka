@@ -143,3 +143,6 @@ Arriba, un buscador (por tipo de entreno o ejercicio, varias palabras, sin tilde
 
 ## Personalización de la pantalla de inicio (v1.12.0)
 En Ajustes → Personalización se elige qué bloques salen en el inicio (Predefinidos, cada tipo de entreno, Ejercicios, Historial, Compartir) y en qué orden (▲ ▼). «Restaurar» devuelve el estado original. Se guarda en `settings.homeOrder` y `settings.homeHidden`; los bloques nuevos de futuras versiones se añaden al final. También se arregla la fila de botones de prueba de voces en Ajustes.
+
+## Inicio limpio con botón «i» (v1.12.1)
+Las tarjetas del inicio ya no llevan descripción: una «i» en la esquina despliega la explicación.
