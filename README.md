@@ -140,3 +140,6 @@ Suena al empezar el entreno y al empezar cada intervalo de trabajo después de u
 
 ## Historial con calendario y buscador (v1.11.0)
 Arriba, un buscador (por tipo de entreno o ejercicio, varias palabras, sin tildes). Debajo, el calendario del mes con un punto de color en los días entrenados; al pulsar un día se ve el entreno, su resultado y la hora. Después, el historial por lista agrupado por entreno, como siempre. El filtro afecta a calendario y lista.
+
+## Personalización de la pantalla de inicio (v1.12.0)
+En Ajustes → Personalización se elige qué bloques salen en el inicio (Predefinidos, cada tipo de entreno, Ejercicios, Historial, Compartir) y en qué orden (▲ ▼). «Restaurar» devuelve el estado original. Se guarda en `settings.homeOrder` y `settings.homeHidden`; los bloques nuevos de futuras versiones se añaden al final. También se arregla la fila de botones de prueba de voces en Ajustes.

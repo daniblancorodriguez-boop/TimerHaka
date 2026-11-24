@@ -3,7 +3,7 @@
   'use strict';
   var T = window.Timer, Store = window.Store, Sound = window.Sound;
   var app = document.getElementById('app');
-  var APP_VERSION = '1.11.1';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
+  var APP_VERSION = '1.12.0';   // versión que se muestra en la pantalla de inicio (subirla en cada entrega; igual que package.json)
   var cleanup = null;      // función que limpia la vista actual (temporizadores, wake lock…)
   var lastResult = null;   // resultado del último entreno terminado (para compartir)
   var resume = null;       // {elapsed, rounds} al retomar un entreno guardado
@@ -123,6 +123,28 @@
     if (n) go(n.getAttribute('data-nav'));
   });
 
+  /* ---------- Bloques de la pantalla de inicio (se pueden ocultar y reordenar en Ajustes → Personalización) ---------- */
+  function homeCard(nav, icon, title, desc, cls) {
+    return '<button class="card' + (cls ? ' ' + cls : '') + '" data-nav="' + nav + '"><span>' + icon + '</span><span><span class="c-title">' + esc(title) + '</span><span class="c-desc">' + esc(desc) + '</span></span></button>';
+  }
+  function homeBlocks() {
+    var b = [{ id: 'presets', name: 'Entrenamientos predefinidos', html: homeCard('#/presets', ICON.presets, 'Entrenamientos predefinidos', 'Los entrenos del box con el tiempo ya configurado. Toca y empieza, o crea el tuyo.', 'accent') }];
+    T.MODES.forEach(function (m) {
+      b.push({ id: m.id, name: m.name, html: homeCard('#/config/' + m.id, ICON[m.id], m.name, m.desc) });
+    });
+    b.push({ id: 'exercises', name: 'Ejercicios', html: homeCard('#/exercises', ICON.exercises, 'Ejercicios', 'Todos los ejercicios guardados y qué es cada uno.') });
+    b.push({ id: 'history', name: 'Historial', html: homeCard('#/history', ICON.history, 'Historial', 'Tus resultados y marcas personales. Repite un entreno y compara.') });
+    b.push({ id: 'share', name: 'Compartir entreno', html: homeCard('#/share/new', ICON.share, 'Compartir entreno', 'Crea la imagen de un entreno hecho con el reloj y la pizarra de clase: resultado, texto y fotos.') });
+    return b;
+  }
+  function orderedBlocks(all, s) {
+    var by = {}, order = [];
+    all.forEach(function (x) { by[x.id] = x; });
+    (s.homeOrder || []).forEach(function (id) { if (by[id] && order.indexOf(id) < 0) order.push(id); });
+    all.forEach(function (x) { if (order.indexOf(x.id) < 0) order.push(x.id); });
+    return order.map(function (id) { return by[id]; });
+  }
+
   /* ---------- Inicio ---------- */
   function viewHome() {
     var s = Store.settings();
@@ -133,20 +155,13 @@
       '<img class="gym-logo' + logoCls() + '" src="' + esc(logoSrc()) + '" alt="' + esc(s.gymName || 'Logo del gimnasio') + '">' +
       '<button class="icon-btn" data-nav="#/settings" aria-label="Ajustes">' + ICON.gear + '</button></div>' +
       '<p class="sr-only">Elige el tipo de entrenamiento</p><ul class="modes">';
-    function modeCard(m) {
-      return '<li><button class="card" data-nav="#/config/' + m.id + '"><span>' + ICON[m.id] + '</span><span><span class="c-title">' + esc(m.name) + '</span><span class="c-desc">' + esc(m.desc) + '</span></span></button></li>';
-    }
-    html += '<li><button class="card accent" data-nav="#/presets"><span>' + ICON.presets + '</span><span><span class="c-title">Entrenamientos predefinidos</span><span class="c-desc">Los entrenos del box con el tiempo ya configurado. Toca y empieza, o crea el tuyo.</span></span></button></li>';
     var sess = Store.session();
     if (sess && !T.getMode(sess.pending.mode)) { Store.clearSession(); sess = null; }
     if (sess) html += '<li><button class="card accent" id="resume-btn"><span>' + ICON.play + '</span><span><span class="c-title">Retomar entreno</span><span class="c-desc">' + esc(sess.pending.name) + ' · pausado en ' + T.fmt(Math.floor(sess.elapsed / 1000)) + '</span></span></button>' +
       '<button class="btn small block" id="resume-del" style="margin-top:6px">Descartar el entreno guardado</button></li>';
-    T.MODES.forEach(function (m) {
-      html += modeCard(m);
-    });
-    html += '<li><button class="card" data-nav="#/exercises"><span>' + ICON.exercises + '</span><span><span class="c-title">Ejercicios</span><span class="c-desc">Todos los ejercicios guardados y qué es cada uno.</span></span></button></li>';
-    html += '<li><button class="card" data-nav="#/history"><span>' + ICON.history + '</span><span><span class="c-title">Historial</span><span class="c-desc">Tus resultados y marcas personales. Repite un entreno y compara.</span></span></button></li>';
-    html += '<li><button class="card" data-nav="#/share/new"><span>' + ICON.share + '</span><span><span class="c-title">Compartir entreno</span><span class="c-desc">Crea la imagen de un entreno hecho con el reloj y la pizarra de clase: resultado, texto y fotos.</span></span></button></li>';
+    var blocks = orderedBlocks(homeBlocks(), s), hid = s.homeHidden || [];
+    var shown = blocks.filter(function (x) { return hid.indexOf(x.id) < 0; });
+    (shown.length ? shown : blocks).forEach(function (x) { html += '<li>' + x.html + '</li>'; });
     app.innerHTML = html + '</ul></div>';
     if (sess) {
       $('#resume-btn').addEventListener('click', function () {
@@ -1098,6 +1113,7 @@
   }
 
   function viewSettings() {
+    if (cleanup) { try { cleanup(); } catch (e) {} cleanup = null; }   // al repintar Ajustes no se apilan listeners
     var s = Store.settings();
     function presetOptions(ev) {
       var cur = s.sounds[ev.id] || { preset: 'beep' };
@@ -1116,6 +1132,16 @@
         (cur.data ? '<div class="s-file">Archivo propio: ' + esc(cur.name || 'sonido') + '</div>' : '') + '</div>';
     }).join('');
 
+    function pzList() {
+      var st = Store.settings(), hid = st.homeHidden || [];
+      var bl = orderedBlocks(homeBlocks(), st);
+      return bl.map(function (x, i) {
+        return '<li class="pz-row"><label class="switch"><span>' + esc(x.name) + '</span><input type="checkbox" data-pz="' + x.id + '"' + (hid.indexOf(x.id) < 0 ? ' checked' : '') + '></label>' +
+          '<button class="btn small" data-pz-mv="' + x.id + '" data-d="-1" aria-label="Subir ' + esc(x.name) + '"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
+          '<button class="btn small" data-pz-mv="' + x.id + '" data-d="1" aria-label="Bajar ' + esc(x.name) + '"' + (i === bl.length - 1 ? ' disabled' : '') + '>▼</button></li>';
+      }).join('');
+    }
+    function pzRefresh() { $('#pz-list').innerHTML = pzList(); }
     var prepOpts = [0, 3, 5, 10, 15, 20].map(function (n) {
       return '<option value="' + n + '"' + (s.prep === n ? ' selected' : '') + '>' + (n ? n + ' segundos' : 'Sin cuenta atrás') + '</option>';
     }).join('');
@@ -1124,6 +1150,10 @@
       '<div class="panel"><h2>Esfera del reloj</h2>' +
       '<div class="field"><select class="text-in" id="dial" aria-label="Esfera del reloj"><option value="ring"' + (s.dial !== 'classic' ? ' selected' : '') + '>Esfera circular (predeterminada)</option><option value="classic"' + (s.dial === 'classic' ? ' selected' : '') + '>Esfera clásica</option></select></div>' +
       '<p class="s-hint">Circular: el tiempo y las rondas dentro de un círculo amarillo cuyas rayas se van consumiendo. Clásica: marcador rectangular de siempre.</p></div>' +
+      '<div class="panel"><h2>Personalización</h2>' +
+      '<p class="s-hint">Elige qué bloques salen en la pantalla de inicio y en qué orden. «Retomar entreno» aparece siempre arriba cuando hay uno pausado.</p>' +
+      '<ul class="pz" id="pz-list">' + pzList() + '</ul>' +
+      '<button class="btn small block" id="pz-reset" style="margin-top:10px">Restaurar orden y bloques</button></div>' +
       '<div class="panel"><h2>Cuenta atrás</h2>' +
       '<div class="field"><div class="flabel">Cuenta atrás antes de empezar</div><select class="text-in" id="prep">' + prepOpts + '</select></div>' +
       '<label class="switch"><span>Pitidos 3, 2, 1 al final de cada intervalo</span><input type="checkbox" id="b3"' + (s.beepLast3 ? ' checked' : '') + '></label>' +
@@ -1135,7 +1165,7 @@
       '<label class="switch"><span>Voz «Go!» al empezar el entreno y cada intervalo de trabajo (en lugar del pitido corto)</span><input type="checkbox" id="gv"' + (s.goVoice ? ' checked' : '') + '></label>' +
       '<label class="switch"><span>Voz «Rest» al empezar cada descanso (en lugar del tono grave)</span><input type="checkbox" id="rv"' + (s.restVoice ? ' checked' : '') + '></label>' +
       '<label class="switch"><span>Voz «Well done» al terminar (después de la bocina)</span><input type="checkbox" id="wv"' + (s.wellVoice ? ' checked' : '') + '></label>' +
-      '<div class="row" style="flex-wrap:wrap;margin:6px 0 10px"><button class="btn small" data-sample="countfile">' + ICON.play + 'Cuenta atrás</button>' +
+      '<div class="samples"><button class="btn small" data-sample="countfile">' + ICON.play + 'Cuenta atrás</button>' +
       '<button class="btn small" data-sample="half">' + ICON.play + 'Mitad</button><button class="btn small" data-sample="well">' + ICON.play + 'Well done</button>' +
       '<button class="btn small" data-sample="lastround">' + ICON.play + 'Last round</button><button class="btn small" data-sample="lastmin">' + ICON.play + 'Last minute</button><button class="btn small" data-sample="tensec">' + ICON.play + 'Ten seconds</button><button class="btn small" data-sample="restvoice">' + ICON.play + 'Rest</button><button class="btn small" data-sample="govoice">' + ICON.play + 'Go</button></div>' +
       '<label class="switch"><span>Vibración</span><input type="checkbox" id="vib"' + (s.vibrate ? ' checked' : '') + '></label>' +
@@ -1152,7 +1182,12 @@
 
     function onChange(e) {
       var t = e.target;
-      if (t.id === 'prep') Store.setSettings({ prep: +t.value });
+      if (t.dataset.pz) {
+        var hid = (Store.settings().homeHidden || []).filter(function (id) { return id !== t.dataset.pz; });
+        if (!t.checked) hid.push(t.dataset.pz);
+        Store.setSettings({ homeHidden: hid });
+      }
+      else if (t.id === 'prep') Store.setSettings({ prep: +t.value });
       else if (t.id === 'b3') Store.setSettings({ beepLast3: t.checked });
       else if (t.id === 'dial') Store.setSettings({ dial: t.value === 'classic' ? 'classic' : 'ring' });
       else if (t.id === 'cf') Store.setSettings({ countFile: t.checked });
@@ -1183,6 +1218,13 @@
     }
     function onClick(e) {
       var tb = e.target.closest('[data-test]'), sb = e.target.closest('[data-sample]');
+      var mv = e.target.closest('[data-pz-mv]');
+      if (mv) {
+        var ord = orderedBlocks(homeBlocks(), Store.settings()).map(function (x) { return x.id; });
+        var i = ord.indexOf(mv.dataset.pzMv), j = i + (+mv.dataset.d);
+        if (i >= 0 && j >= 0 && j < ord.length) { var tmp = ord[i]; ord[i] = ord[j]; ord[j] = tmp; Store.setSettings({ homeOrder: ord }); pzRefresh(); }
+      }
+      if (e.target.closest('#pz-reset')) { Store.setSettings({ homeOrder: [], homeHidden: [] }); pzRefresh(); toast('Pantalla de inicio restaurada'); }
       if (tb) { Sound.unlock(); Sound.preview(tb.dataset.test); }
       if (sb) { Sound.unlock(); Sound.preview(sb.dataset.sample); }
       if (e.target.closest('#snd-access')) {
