@@ -137,3 +137,6 @@ Al empezar cada descanso (Tabata, Intervalos, Trabajo = descanso, AMRAP con desc
 ### Voz «Go!»
 
 Suena al empezar el entreno y al empezar cada intervalo de trabajo después de un descanso (Tabata, Intervalos, Trabajo = descanso, AMRAP con descansos, Fight Gone Bad), en lugar del pitido corto. En EMOM solo suena al empezar (cada minuto ya suena el archivo de cuenta atrás). Al empezar el entreno entra a la vez que el pitido largo. Si coincide con «Last round!», este espera a que termine el «Go!». Se puede apagar en Ajustes.
+
+## Historial con calendario y buscador (v1.11.0)
+Arriba, un buscador (por tipo de entreno o ejercicio, varias palabras, sin tildes). Debajo, el calendario del mes con un punto de color en los días entrenados; al pulsar un día se ve el entreno, su resultado y la hora. Después, el historial por lista agrupado por entreno, como siempre. El filtro afecta a calendario y lista.
