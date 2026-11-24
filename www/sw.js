@@ -1,5 +1,5 @@
 /* Service worker de HAKATIMER: funciona sin conexión */
-const CACHE = 'hakatimer-v26';
+const CACHE = 'hakatimer-v27';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/timer.js', 'js/exercises.js', 'js/store.js', 'js/audio.js', 'js/led.js', 'js/share.js', 'js/shareui.js', 'js/app.js',
